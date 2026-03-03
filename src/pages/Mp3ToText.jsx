@@ -51,6 +51,7 @@ export default function Mp3ToText() {
     const lastScrollIndex = useRef(-1);
 
     // 划词逻辑与碰撞检测
+    // 划词逻辑与碰撞检测 - 已优化边界计算
     const handleMouseUp = async (e) => {
         const selection = window.getSelection();
         const selectedText = selection.toString().trim().replace(/\s+/g, '');
@@ -59,28 +60,56 @@ export default function Mp3ToText() {
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
 
-            // 预估弹窗高度约为 280px (根据内容动态变化)
-            const estimatedHeight = 280;
-            const spaceBelow = window.innerHeight - rect.bottom;
+            // 预估弹窗尺寸（当前宽度固定为 580px，高度根据内容预估最大约 350px）
+            const estimatedHeight = 350;
+            const estimatedWidth = 580;
+
+            // 获取实际可视区域（排除浏览器UI，如地址栏）
+            const viewportHeight = window.visualViewport?.height || window.innerHeight;
+            const viewportWidth = window.visualViewport?.width || window.innerWidth;
+            // 获取当前滚动条位置
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+            // 设置安全边距：避免弹窗贴死浏览器边缘
+            const safeTopMargin = 70;    // 顶部预留出地址栏或操作空间
+            const safeBottomMargin = 40; // 底部预留出任务栏空间
+            const safeSideMargin = 20;   // 左右预留 20px
+
+            // 计算选中文本相对于视口的位置
+            const spaceBelow = viewportHeight - rect.bottom;
             const spaceAbove = rect.top;
 
-            let y = rect.bottom + window.scrollY;
+            let y = 0;
+            let x = rect.left + scrollLeft;
             let position = 'bottom';
 
-            // 如果下方空间不足且上方空间充足，则向上弹出
-            if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
-                y = rect.top + window.scrollY - 12; // 向上偏移一点
-                position = 'top';
+            // Y 轴判断：如果下方空间不足以容纳弹窗高度+安全边距
+            if (spaceBelow < (estimatedHeight + safeBottomMargin)) {
+                // 如果上方空间比下方多，则尝试向上弹出
+                if (spaceAbove > spaceBelow) {
+                    // 向上弹出：计算 Y 坐标，并确保不超出顶部安全线
+                    const targetY = rect.top + scrollTop - 12; // 向上偏移 12px
+                    y = Math.max(scrollTop + safeTopMargin + estimatedHeight, targetY);
+                    position = 'top';
+                } else {
+                    // 如果上下都不够，强行向下，但 Y 坐标要上移以保证底部可见
+                    y = scrollTop + viewportHeight - estimatedHeight - safeBottomMargin;
+                    position = 'bottom';
+                }
             } else {
-                y = rect.bottom + window.scrollY + 12; // 向下偏移一点
+                // 下方空间充足，向下弹出
+                y = rect.bottom + scrollTop + 12;
                 position = 'bottom';
             }
 
-            // X 轴边界保护 (不超出右侧)
-            let x = rect.left + window.scrollX;
-            const popupWidth = 288; // w-72
-            if (x + popupWidth > window.innerWidth - 20) {
-                x = window.innerWidth - popupWidth - 20;
+            // X 轴边界保护：确保不超出右边界
+            if (x + estimatedWidth > scrollLeft + viewportWidth - safeSideMargin) {
+                x = scrollLeft + viewportWidth - estimatedWidth - safeSideMargin;
+            }
+            // 确保不超出左边界
+            if (x < scrollLeft + safeSideMargin) {
+                x = scrollLeft + safeSideMargin;
             }
 
             setLookup({
@@ -94,13 +123,13 @@ export default function Mp3ToText() {
             });
 
             try {
-                const response = await fetch(`http://localhost:8000/translate?keyword=${encodeURIComponent(selectedText)}`);
+                const response = await fetch(`http://localhost:8000/translate_mazii?keyword=${encodeURIComponent(selectedText)}`);
                 const json = await response.json();
 
                 setLookup(prev => ({
                     ...prev,
                     loading: false,
-                    data: json.data && json.data.length > 0 ? json.data : null
+                    data: json.data && json.data.length > 0 ? json.data[0] : null
                 }));
             } catch (error) {
                 setLookup(prev => ({ ...prev, loading: false }));
@@ -189,6 +218,12 @@ export default function Mp3ToText() {
     };
 
     const handleWordClick = (startTime) => {
+        // 如果有文字被选中（划词），则不触发播放
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        if (selectedText.length > 0) {
+            return;
+        }
         wavesurfer.current?.setTime(startTime);
         wavesurfer.current?.play();
     };
@@ -225,7 +260,7 @@ export default function Mp3ToText() {
                                     </button>
                                     {isRateOpen && (
                                         <div className="absolute bottom-full mb-2 left-0 w-full bg-white/95 backdrop-blur-md border border-stone-200 rounded-2xl shadow-xl z-50 overflow-hidden">
-                                            {[0.5, 0.75, 1.0, 1.25, 1.5].map((rate) => (
+                                            {[0.75, 1.0, 1.25].map((rate) => (
                                                 <div key={rate} onClick={() => {setPlaybackRate(rate); setIsRateOpen(false);}} className={`px-4 py-2.5 text-sm font-semibold cursor-pointer text-center ${playbackRate === rate ? 'bg-stone-100' : 'hover:bg-stone-50'}`} style={{ color: playbackRate === rate ? colors.primary : colors.text }}>
                                                     {rate.toFixed(2)}X
                                                 </div>
@@ -267,21 +302,19 @@ export default function Mp3ToText() {
             {lookup.show && (
                 <div
                     ref={dictionaryRef}
-                    className="fixed z-[100] w-72 border border-stone-200/40 shadow-2xl rounded-2xl p-4 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-2xl selection:bg-white/40"
+                    className="fixed z-[100] w-[580px] border border-stone-200/40 shadow-2xl rounded-2xl p-4 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-2xl selection:bg-white/40"
                     style={{
                         left: lookup.x,
                         top: lookup.y,
                         // 如果是向上弹出，则使用 transform 偏移自身高度
                         transform: lookup.position === 'top' ? 'translateY(-100%)' : 'none',
-                        backgroundColor: colors.morandiNeonGreen,
-                        maxHeight: '80vh',
-                        overflow: 'hidden'
+                        backgroundColor: colors.morandiNeonGreen
                     }}
                 >
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-1.5 text-stone-600">
                             <Search size={14} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">有道词典 (中日)</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Mazii</span>
                         </div>
                         <button onClick={() => setLookup(prev => ({ ...prev, show: false }))} className="text-stone-500 hover:text-stone-800"><X size={14} /></button>
                     </div>
@@ -290,20 +323,70 @@ export default function Mp3ToText() {
                         <div className="py-4 flex flex-col items-center gap-2">
                             <Loader2 className="animate-spin w-5 h-5 text-stone-500" />
                         </div>
-                    ) : lookup.data ? (
-                        <div className="space-y-3">
-                            <div className="text-lg font-bold text-stone-900 border-b border-stone-300/30 pb-1">{lookup.text}</div>
-                            <div className="space-y-3 max-h-52 overflow-y-auto pr-1 scrollbar-hide">
-                                {lookup.data.slice(0, 3).map((entry, i) => (
-                                    <div key={i} className="text-sm">
-                                        <div className="text-stone-800 font-bold mb-0.5">{entry.entry}</div>
-                                        <div className="text-stone-700 text-xs leading-relaxed">{entry.explain}</div>
-                                    </div>
+                    ) : lookup.data && (
+                        <div className="h-[282px] overflow-y-auto pr-1 custom-scrollbar">
+                            {/* Word | Level | Pronunciation in one row */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-lg font-bold text-stone-900">
+                                    {lookup.data.word || lookup.text}
+                                </span>
+                                {lookup.data.level && lookup.data.level.length > 0 && (
+                                    <span className="text-[10px] bg-stone-200/60 px-1.5 py-0.5 rounded font-bold text-stone-600">
+                                        {lookup.data.level[0]}
+                                    </span>
+                                )}
+                                {lookup.data.pronunciation && lookup.data.pronunciation.map((p, i) => (
+                                    <span key={i} className="text-[10px] text-stone-500 font-bold">
+                                        {p.accent}
+                                    </span>
                                 ))}
                             </div>
+
+                            {/* Means - Grid layout, 2 columns */}
+                            {lookup.data.means && (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-3">
+                                    {lookup.data.means.map((meanItem, meanIdx) => (
+                                        <div key={meanIdx} className="space-y-1 border-r border-stone-200 pr-3 last:border-r-0 min-w-0">
+                                            {/* Mean, Kind, Xref, Ant */}
+                                            <div className="text-stone-800 text-sm">
+                                                <div className="font-medium text-stone-900">{meanItem.mean}</div>
+                                                {meanItem.kind && (
+                                                    <div className="text-[10px] text-stone-500 italic">{meanItem.kind}</div>
+                                                )}
+                                                {meanItem.xref && meanItem.xref.length > 0 && (
+                                                    <div className="text-[9px] text-stone-500 truncate">
+                                                        <span className="font-medium">⇒</span> {meanItem.xref.join(', ')}
+                                                    </div>
+                                                )}
+                                                {meanItem.ant && meanItem.ant.length > 0 && (
+                                                    <div className="text-[9px] text-stone-500 truncate">
+                                                        <span className="font-medium">⇔</span> {meanItem.ant.join(', ')}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Examples */}
+                                            {meanItem.examples && meanItem.examples.length > 0 && (
+                                                <>
+                                                    <div className="text-[8px] text-stone-300 my-0.5">{'-'.repeat(15)}</div>
+                                                    {meanItem.examples.map((ex, exIdx) => (
+                                                        <div key={exIdx} className="ml-1 space-y-0.5">
+                                                            <div className="text-xs text-stone-700 japanese-text">{ex.content}</div>
+                                                            <div className="text-[10px] text-stone-400">{ex.transcription}</div>
+                                                            <div className="text-[10px] text-stone-600">{ex.mean}</div>
+                                                        </div>
+                                                    ))}
+                                                </>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="pt-2 text-[9px] text-stone-500 text-right italic border-t border-stone-300/30 mt-3">
+                                Source: Mazii
+                            </div>
                         </div>
-                    ) : (
-                        <div className="py-4 text-center text-xs text-stone-600">未找到中文释义</div>
                     )}
                 </div>
             )}
