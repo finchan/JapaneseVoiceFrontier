@@ -128,6 +128,7 @@ export default function Mp3ToText() {
             const response = await fetch(`http://localhost:8000/translate_mazii?keyword=${encodeURIComponent(queryText)}`);
             const json = await response.json();
             setLookup(prev => ({ ...prev, loading: false, data: json.data?.[0] || null }));
+            // eslint-disable-next-line no-unused-vars
         } catch (e) {
             setLookup(prev => ({ ...prev, loading: false, data: null }));
         }
@@ -223,11 +224,14 @@ export default function Mp3ToText() {
         setLoading(true);
         const formData = new FormData();
         formData.append("file", file);
+        const currentRole = localStorage.getItem('user_role') || 'guest';
+        formData.append("role", currentRole);
         try {
             const response = await fetch("http://localhost:8000/transcribe", { method: "POST", body: formData });
             const result = await response.json();
             setAudioUrl(URL.createObjectURL(file));
             setTranscript(result.data || result);
+            // eslint-disable-next-line no-unused-vars
         } catch (e) { alert("识别失败"); } finally { setLoading(false); }
     };
 
@@ -380,14 +384,24 @@ export default function Mp3ToText() {
                                                 return (
                                                     <div key={i} className="flex items-center border-r last:border-0 pr-3 border-stone-300">
                                                         <div className="flex">
-                                                            {moras.map((m, mIdx) => (
-                                                                <span key={mIdx} className="japanese-text text-lg px-0.5 relative" style={{
-                                                                    borderTop: pattern[mIdx] === 'H' ? `2px solid ${colors.morandiRed}` : '2px solid transparent',
-                                                                    borderBottom: pattern[mIdx] === 'L' ? `2px solid ${colors.morandiRed}` : '2px solid transparent',
-                                                                    borderRight: (moras.length > 1 && mIdx === 0) ? `2px solid ${colors.morandiRed}` : 'none',
-                                                                    padding: '2px 0'
-                                                                }}>{m}</span>
-                                                            ))}
+                                                            {moras.map((m, mIdx) => {
+                                                                // 核心逻辑：判断相邻音拍是否发生变化
+                                                                const currentLevel = pattern[mIdx];
+                                                                const nextLevel = pattern[mIdx + 1];
+                                                                // 规则：只要相邻两个不同 (LH 或 HL)，前者右侧加竖线
+                                                                const hasRightBorder = nextLevel && currentLevel !== nextLevel;
+
+                                                                return (
+                                                                    <span key={mIdx} className="japanese-text text-lg px-0.5 relative" style={{
+                                                                        // 顶部线 (High) 或 底部线 (Low)
+                                                                        borderTop: currentLevel === 'H' ? `2px solid ${colors.morandiRed}` : '2px solid transparent',
+                                                                        borderBottom: currentLevel === 'L' ? `2px solid ${colors.morandiRed}` : '2px solid transparent',
+                                                                        // 侧边竖线：根据相邻变化逻辑判断
+                                                                        borderRight: hasRightBorder ? `2px solid ${colors.morandiRed}` : 'none',
+                                                                        padding: '2px 0'
+                                                                    }}>{m}</span>
+                                                                );
+                                                            })}
                                                         </div>
                                                     </div>
                                                 );
@@ -419,6 +433,7 @@ export default function Mp3ToText() {
                                                     <div key={exIdx} className="mt-2 space-y-1.5 border-t border-stone-800/10 pt-2">
                                                         <div className="text-xs text-stone-800 font-bold japanese-text leading-relaxed">{ex.content}</div>
                                                         <div className="text-xs text-stone-600 font-medium leading-relaxed">{ex.mean}</div>
+                                                        <div className="text-xs text-stone-400 font-bold japanese-text leading-relaxed">{ex.transcription}</div>
                                                     </div>
                                                 ))}
                                             </div>
