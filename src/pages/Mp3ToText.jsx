@@ -218,6 +218,83 @@ export default function Mp3ToText() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // --- 新增：键盘控制逻辑 ---
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // 1. 输入保护：如果用户正在输入，不触发快捷键
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (!wavesurfer.current || !transcript) return;
+
+            // 2. 获取当前播放索引，用于左右键跳转
+            const currentIndex = transcript.findIndex(
+                line => currentTime >= line.start && currentTime <= line.end
+            );
+
+            // 3. 定义倍速档位
+            const rateLevels = [0.5, 0.75, 1.0, 1.25, 1.5];
+
+            switch (e.key) {
+                case ' ':
+                    // 空格键：播放/暂停。使用 preventDefault 防止页面滚动
+                    e.preventDefault();
+                    wavesurfer.current.playPause();
+                    break;
+
+                case 'ArrowUp':
+                    // 上键：切换到更慢的一档
+                    e.preventDefault();
+                    setPlaybackRate(prev => {
+                        const currentIdx = rateLevels.indexOf(prev);
+                        // 如果当前倍速是第一档或不在数组内，保持第一档，否则减小索引
+                        const newIdx = currentIdx > 0 ? currentIdx - 1 : 0;
+                        return rateLevels[newIdx];
+                    });
+                    break;
+
+                case 'ArrowDown':
+                    // 下键：切换到更快的一档
+                    e.preventDefault();
+                    setPlaybackRate(prev => {
+                        const currentIdx = rateLevels.indexOf(prev);
+                        // 如果已经是最后一档，保持不变，否则增大索引
+                        const newIdx = (currentIdx < rateLevels.length - 1 && currentIdx !== -1)
+                            ? currentIdx + 1
+                            : rateLevels.length - 1;
+                        return rateLevels[newIdx];
+                    });
+                    break;
+
+                case 'ArrowRight':
+                    // 右键：跳转到下一句开头
+                    const nextIndex = currentIndex + 1;
+                    if (nextIndex < transcript.length) {
+                        wavesurfer.current.setTime(transcript[nextIndex].start);
+                        wavesurfer.current.play();
+                    }
+                    break;
+
+                case 'ArrowLeft':
+                    // 左键：重听本句或跳转到上一句
+                    const currentLineStart = transcript[currentIndex]?.start || 0;
+                    if (currentTime - currentLineStart > 1.5) {
+                        wavesurfer.current.setTime(currentLineStart);
+                    } else {
+                        const prevIndex = Math.max(0, currentIndex - 1);
+                        wavesurfer.current.setTime(transcript[prevIndex].start);
+                    }
+                    wavesurfer.current.play();
+                    break;
+
+                default:
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [currentTime, transcript]); // 监听当前时间和字幕数据以确保逻辑准确
+
+
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -288,7 +365,7 @@ export default function Mp3ToText() {
             </div>
 
             {transcript && (
-                <div className="rounded-3xl shadow-lg overflow-hidden bg-white">
+                <div className="rounded-3xl shadow-lg bg-white">
                     <div className="p-6 border-b" style={{ backgroundColor: colors.primaryLight, borderColor: colors.border }}>
                         <div ref={waveformRef} className="mb-4" />
                         <div className="flex items-center justify-center gap-4">
@@ -301,7 +378,7 @@ export default function Mp3ToText() {
                                 </button>
                                 {isRateOpen && (
                                     <div className="absolute bottom-full mb-2 left-0 w-full bg-white border border-stone-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                                        {[0.75, 1.0, 1.25].map(r => (
+                                        {[0.5, 0.75, 1.0, 1.25, 1.5].map(r => (
                                             <div key={r} onClick={() => {setPlaybackRate(r); setIsRateOpen(false);}} className="px-4 py-2 text-sm cursor-pointer hover:bg-stone-50 text-center">{r.toFixed(2)}X</div>
                                         ))}
                                     </div>
@@ -354,7 +431,7 @@ export default function Mp3ToText() {
                             <div className="flex gap-2">
                                 {['verb', 'adj'].map(m => (
                                     <button key={m} onClick={() => toggleMode(m)} className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all border border-black/5 ${inflectionMode === m ? 'bg-stone-800 text-white shadow-sm' : 'bg-white/50 text-stone-600 hover:bg-white/80'}`}>
-                                        {m === 'verb' ? '动词活用' : '形容词活用'}
+                                        {m === 'verb' ? '动词辞书形' : '形容词辞书形'}
                                     </button>
                                 ))}
                             </div>
@@ -375,9 +452,29 @@ export default function Mp3ToText() {
                                 </div>
                             ) : lookup.data && (
                                 <>
-                                    <div className="flex items-baseline gap-4 mb-4 flex-wrap flex-shrink-0">
-                                        <span className="text-3xl font-black text-stone-900">{lookup.data.word || lookup.text}</span>
-                                        <div className="flex gap-3">
+                                    {/* 修改：items-baseline 改为 items-center 实现垂直居中对齐 */}
+                                    <div className="flex items-center gap-4 mb-4 flex-wrap flex-shrink-0">
+                                        {/* 1. 所查单词：保持 3xl 字体 */}
+                                        <span className="text-3xl font-black text-stone-900 leading-none">
+                                            {lookup.data.word || lookup.text}
+                                        </span>
+                                        {/* 2. Level 标签：使用 colors.text 作为背景，莫兰迪黑加粗 */}
+                                        {!lookup.loading && lookup.data?.level && (
+                                            <div
+                                                className="px-3 py-1 rounded-full flex items-center shadow-md text-stone-900 animate-in fade-in zoom-in duration-500"
+                                                style={{
+                                                    borderColor: colors.cardBorder, // 莫兰迪黑背景
+                                                    borderWidth: "1px",
+                                                    color: colors.cardBorder          // 白色文字
+                                                }}
+                                            >
+                                                <span className="text-[10px] font-black tracking-widest uppercase">
+                                                    {lookup.data.level}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {/* 3. 音调部分：也会随着父容器 items-center 自动垂直居中 */}
+                                        <div className="flex gap-3 ml-2">
                                             {lookup.data.pronunciation?.map((p, i) => {
                                                 const moras = getMoraList(p.kana);
                                                 const pattern = parseAccentPattern(p.accent);
@@ -385,18 +482,14 @@ export default function Mp3ToText() {
                                                     <div key={i} className="flex items-center border-r last:border-0 pr-3 border-stone-300">
                                                         <div className="flex">
                                                             {moras.map((m, mIdx) => {
-                                                                // 核心逻辑：判断相邻音拍是否发生变化
                                                                 const currentLevel = pattern[mIdx];
                                                                 const nextLevel = pattern[mIdx + 1];
-                                                                // 规则：只要相邻两个不同 (LH 或 HL)，前者右侧加竖线
                                                                 const hasRightBorder = nextLevel && currentLevel !== nextLevel;
 
                                                                 return (
-                                                                    <span key={mIdx} className="japanese-text text-lg px-0.5 relative" style={{
-                                                                        // 顶部线 (High) 或 底部线 (Low)
+                                                                    <span key={mIdx} className="japanese-text text-sm px-0.5 relative" style={{
                                                                         borderTop: currentLevel === 'H' ? `2px solid ${colors.morandiRed}` : '2px solid transparent',
                                                                         borderBottom: currentLevel === 'L' ? `2px solid ${colors.morandiRed}` : '2px solid transparent',
-                                                                        // 侧边竖线：根据相邻变化逻辑判断
                                                                         borderRight: hasRightBorder ? `2px solid ${colors.morandiRed}` : 'none',
                                                                         padding: '2px 0'
                                                                     }}>{m}</span>
