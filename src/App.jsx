@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, FileText, Languages, ChevronDown, LogIn, UserCircle, Check, LogOut, Settings, Database } from 'lucide-react';
+import { Volume2, FileText, Languages, ChevronDown, UserCircle, LogOut, Settings, Database } from 'lucide-react';
+import Login from './pages/Login';
 import Mp3ToText from './pages/Mp3ToText';
 import TextToVoice from './pages/TextToVoice';
 import VerbeConjugation from './pages/VerbeConjugation';
-// 新增引入
 import Mp3Management from './pages/Mp3Management';
 import Mp3Sources from './pages/Mp3Sources';
 
@@ -20,47 +20,58 @@ const colors = {
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [role, setRole] = useState('Guest');
-    const [isRoleOpen, setIsRoleOpen] = useState(false);
     const [activeMenu, setActiveMenu] = useState('MP3/TEXT');
-    // 新增状态：控制导航栏内的二级菜单
     const [isMp3SubMenuOpen, setIsMp3SubMenuOpen] = useState(false);
 
-    const dropdownRef = useRef(null);
     const mp3MenuRef = useRef(null);
 
     useEffect(() => {
+        // Check if user is already logged in
+        const storedRole = localStorage.getItem('user_role');
+        if (storedRole) {
+            setRole(storedRole.charAt(0).toUpperCase() + storedRole.slice(1));
+            setIsAuthenticated(true);
+        }
+
         const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsRoleOpen(false);
-            // 点击外部关闭 MP3 二级菜单
-            if (mp3MenuRef.current && !mp3MenuRef.current.contains(e.target)) setIsMp3SubMenuOpen(false);
+            if (mp3MenuRef.current && !mp3MenuRef.current.contains(e.target)) {
+                setIsMp3SubMenuOpen(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleLogin = () => {
-        localStorage.setItem('user_role', role.toLowerCase());
+    const handleLogin = (selectedRole) => {
+        localStorage.setItem('user_role', selectedRole.toLowerCase());
+        setRole(selectedRole);
         setIsAuthenticated(true);
+        setActiveMenu('MP3/TEXT'); // Set welcome page
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('user_role');
+        setIsAuthenticated(false);
     };
 
     if (!isAuthenticated) {
-        /* ... 保持你原有的登录页面逻辑不变 ... */
+        return <Login onLogin={handleLogin} />;
     }
 
     return (
         <div className="min-h-screen font-sans" style={{ backgroundColor: colors.background }}>
-            {/* 导航菜单 - 移除了 overflow-hidden 确保下拉不被遮挡 */}
+            {/* Navigation Menu */}
             <nav className="shadow-sm sticky top-0 z-[1000]" style={{ backgroundColor: colors.white, borderBottom: `1px solid ${colors.border}` }}>
                 <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-16">
-                    {/* 左侧角色展示 */}
+                    {/* Left role indicator */}
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 border border-stone-200">
                         <UserCircle size={14} style={{ color: colors.primary }} />
                         <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: colors.text }}>{role}</span>
                     </div>
 
-                    {/* 中间核心菜单 */}
+                    {/* Main Menu */}
                     <div className="flex items-center gap-2 h-full">
-                        {/* 1. 带二级菜单的 MP3/TEXT */}
+                        {/* MP3/TEXT with Submenu */}
                         <div
                             className="relative h-full flex items-center"
                             ref={mp3MenuRef}
@@ -82,7 +93,7 @@ function App() {
                                 <ChevronDown size={14} className={`transition-transform duration-300 ${isMp3SubMenuOpen ? 'rotate-180' : ''}`} />
                             </button>
 
-                            {/* 二级菜单内容 */}
+                            {/* Submenu */}
                             {isMp3SubMenuOpen && (
                                 <div className="absolute top-full left-0 w-48 bg-white border border-stone-200 rounded-xl shadow-2xl py-2 z-[1100] animate-in fade-in slide-in-from-top-2 duration-200">
                                     <button
@@ -101,7 +112,7 @@ function App() {
                             )}
                         </div>
 
-                        {/* 其他一级菜单 */}
+                        {/* Other Menu Items */}
                         {[
                             { id: 'TEXT/VOICE', icon: FileText },
                             { id: 'VERBE CONJUGATION', icon: Languages }
@@ -127,9 +138,9 @@ function App() {
                         })}
                     </div>
 
-                    {/* 右侧退出按钮 */}
+                    {/* Exit Button */}
                     <button
-                        onClick={() => setIsAuthenticated(false)}
+                        onClick={handleLogout}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all duration-300 group"
                     >
                         <LogOut size={14} />
@@ -138,7 +149,7 @@ function App() {
                 </div>
             </nav>
 
-            {/* 主内容区域 */}
+            {/* Content Area */}
             <div className="p-4 md:p-10">
                 <div className="max-w-5xl mx-auto">
                     {activeMenu === 'MP3/TEXT' && <Mp3ToText />}

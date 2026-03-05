@@ -298,6 +298,16 @@ export default function Mp3ToText() {
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        // Cleanup previous state
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        if (wavesurfer.current) {
+            wavesurfer.current.destroy();
+            wavesurfer.current = null;
+        }
+        setTranscript(null);
+        setCurrentTime(0);
+
         setLoading(true);
         const formData = new FormData();
         formData.append("file", file);
@@ -312,7 +322,9 @@ export default function Mp3ToText() {
         } catch (e) { alert("识别失败"); } finally { setLoading(false); }
     };
 
+
     const initWavesurfer = (url) => {
+        if (wavesurfer.current) return; // Guard against double init
         wavesurfer.current = WaveSurfer.create({
             container: waveformRef.current,
             waveColor: colors.waveColor,
@@ -327,9 +339,17 @@ export default function Mp3ToText() {
     };
 
     useEffect(() => {
-        if (transcript && waveformRef.current && audioUrl && !wavesurfer.current) initWavesurfer(audioUrl);
-        return () => wavesurfer.current?.destroy();
+        if (transcript && waveformRef.current && audioUrl) {
+            initWavesurfer(audioUrl);
+        }
+        return () => {
+            if (wavesurfer.current) {
+                wavesurfer.current.destroy();
+                wavesurfer.current = null;
+            }
+        };
     }, [transcript, audioUrl]);
+
 
     const handleWordClick = (startTime) => {
         if (window.getSelection().toString().trim().length > 0) return;
@@ -360,7 +380,7 @@ export default function Mp3ToText() {
                 <input type="file" accept="audio/*" onChange={handleFileChange} className="hidden" id="audio-upload" />
                 <label htmlFor="audio-upload" className="cursor-pointer flex flex-col items-center">
                     {loading ? <Loader2 className="animate-spin" style={{ color: colors.primary }} /> : <Upload style={{ color: colors.textLight }} />}
-                    <span className="mt-2 text-stone-600 font-medium">点击上传音频开始练习</span>
+                    <span className="mt-2 text-stone-900 text-xl">UPLOAD MP3 TO BEGIN PRACTICE</span>
                 </label>
             </div>
 
