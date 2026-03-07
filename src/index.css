@@ -23,3 +23,35 @@ rt {
     letter-spacing: 0.05em;
     line-height: 1.2;
 }
+
+/* macOS 风格莫兰迪黑色细滚动条 */
+/* 针对所有使用了 custom-scrollbar 的容器 */
+.custom-scrollbar {
+    /* 确保在内容溢出时产生滚动条 */
+    overflow-y: auto;
+}
+
+/* macOS 风格莫兰迪黑色细滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 5px; /* 设置宽度，如果没设置这个，下面的 thumb 不会显示 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent; /* 背景透明 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #3d3d3d; /* 莫兰迪黑色 */
+    border-radius: 10px;       /* 圆角 */
+    border: 1px solid transparent; /* 边距感 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #555555; /* 鼠标悬停时稍微变亮 */
+}
+
+/* 兼容 Firefox */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #3d3d3d transparent;
+}

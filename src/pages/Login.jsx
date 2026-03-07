@@ -48,64 +48,54 @@ export default function Login({ onLogin }) {
                         continue</p>
                 </div>
 
-                {/* Login.jsx - Simplified Action Row without Hover Effects */}
-                <div className="space-y-4 mt-4">
-                    {/* Flex container for Dropdown and Button in one line */}
-                    <div className="flex items-center gap-3 relative">
-                        <div className="relative flex-grow" ref={dropdownRef}>
-                            {/* Role Selection Toggle - Removed hover:bg-stone-100/50 */}
-                            <button
-                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                className="w-full h-[56px] flex items-center justify-between bg-stone-50 border border-stone-200 rounded-xl px-5 text-stone-700 font-bold transition-all"
-                                style={{ borderColor: colors.border }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    {role === 'Admin' ?
-                                        <ShieldCheck size={18} className="text-stone-500" /> :
-                                        <User size={18} className="text-stone-500" />
-                                    }
-                                    <span className="text-sm">{role}</span>
-                                </div>
-                                <ChevronDown size={18} className={`text-stone-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {/* Dropdown Menu - Opens upwards to avoid layout shift */}
-                            {isDropdownOpen && (
-                                <div className="absolute bottom-full mb-2 left-0 w-full bg-white border border-stone-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                    {roles.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            onClick={() => {
-                                                setRole(item.id);
-                                                setIsDropdownOpen(false);
-                                            }}
-                                            className={`px-5 py-4 cursor-pointer transition-colors flex items-center gap-4 ${
-                                                role === item.id ? 'bg-stone-50' : 'bg-white'
-                                            }`}
-                                        >
-                                            <div className={`p-2 rounded-lg ${role === item.id ? 'bg-[#9c8c7d] text-white' : 'bg-stone-100 text-stone-500'}`}>
-                                                <item.icon size={18} />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className={`font-bold text-sm ${role === item.id ? 'text-stone-900' : 'text-stone-600'}`}>{item.id}</span>
-                                                <span className="text-[10px] text-stone-400 font-medium uppercase tracking-tight">{item.description}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Login Button */}
+                {/* Action Row: Dropdown and Button in one line */}
+                <div className="flex items-center gap-3 mt-4 relative">
+                    <div className="relative flex-grow" ref={dropdownRef}>
                         <button
-                            onClick={handleLogin}
-                            className="h-[56px] flex items-center justify-center gap-2 px-8 rounded-xl text-white font-bold shadow-md active:scale-95 transition-all duration-300 shrink-0"
-                            style={{ backgroundColor: colors.primary }}
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className="w-full h-[56px] flex items-center justify-between bg-stone-50 border border-stone-200 rounded-xl px-5 text-stone-700 font-bold transition-all hover:bg-stone-100/50"
+                            style={{ borderColor: colors.border }}
                         >
-                            <LogIn size={20} />
-                            <span>LOGIN</span>
+                            <div className="flex items-center gap-3">
+                                {role === 'Admin' ? <ShieldCheck size={18} className="text-stone-500" /> : <User size={18} className="text-stone-500" />}
+                                <span className="text-sm">{role}</span>
+                            </div>
+                            <ChevronDown size={18} className={`text-stone-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
+
+                        {/* Dropdown Menu */}
+                        {isDropdownOpen && (
+                            <div className="absolute top-full mt-2 left-0 w-full bg-white border border-stone-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                {roles.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => {
+                                            setRole(item.id);
+                                            setIsDropdownOpen(false);
+                                        }}
+                                        className={`px-5 py-4 cursor-pointer transition-colors flex items-center gap-4 hover:bg-stone-50 ${role === item.id ? 'bg-stone-50/50' : ''}`}
+                                    >
+                                        <div className={`p-2 rounded-lg ${role === item.id ? 'bg-[#9c8c7d] text-white' : 'bg-stone-100 text-stone-500'}`}>
+                                            <item.icon size={18} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className={`font-bold text-sm ${role === item.id ? 'text-stone-900' : 'text-stone-600'}`}>{item.id}</span>
+                                            <span className="text-[10px] text-stone-400 font-medium uppercase tracking-tight">{item.description}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
+
+                    <button
+                        onClick={handleLogin}
+                        className="h-[56px] flex items-center justify-center gap-2 px-8 rounded-xl text-white font-bold shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-300 whitespace-nowrap"
+                        style={{ backgroundColor: colors.primary }}
+                    >
+                        <LogIn size={20} />
+                        LOGIN
+                    </button>
                 </div>
 
                 <div className="mt-12 text-center">
