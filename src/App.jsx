@@ -150,7 +150,7 @@ function App() {
             </nav>
 
             {/* Content Area */}
-            <div className="p-4 md:p-10">
+            <div className="p-4 md:p-5">
                 <div className="max-w-5xl mx-auto">
                     {activeMenu === 'MP3/TEXT' && <Mp3ToText />}
                     {activeMenu === 'MP3 MANAGEMENT' && <Mp3Management />}

@@ -386,13 +386,14 @@ export default function Mp3ToText() {
         <div className="space-y-6 relative">
             <style>{customStyles}</style>
 
-            <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-10 bg-white"
-                 style={{borderColor: colors.border}}>
+            <div className="flex items-center justify-center border-2 border-dashed rounded-full p-2 gap-3"
+                 style={{borderColor: colors.border, background: 'radial-gradient(circle at center, #e8e4df 0%, #dce4e8 100%)'}}>
+
                 <input type="file" accept="audio/*" onChange={handleFileChange} className="hidden" id="audio-upload"/>
-                <label htmlFor="audio-upload" className="cursor-pointer flex flex-col items-center">
+                <label htmlFor="audio-upload" className="cursor-pointer flex items-center gap-2">
                     {loading ? <Loader2 className="animate-spin" style={{color: colors.primary}}/> :
-                        <Upload style={{color: colors.textLight}}/>}
-                    <span className="mt-2 text-stone-900 text-xl">UPLOAD MP3 TO BEGIN PRACTICE</span>
+                        <Upload size={16} style={{color: colors.textLight}}/>}
+                    <span className="text-stone-900 text-xs">UPLOAD MP3 TO BEGIN PRACTICE</span>
                 </label>
             </div>
 
@@ -432,19 +433,20 @@ export default function Mp3ToText() {
                     </div>
 
                     <div ref={scrollContainerRef} onMouseUp={handleMouseUp}
-                         className="p-8 overflow-y-auto cursor-text leading-relaxed slim-scroll scroll-smooth"
+                         className="p-4 overflow-y-auto cursor-text leading-relaxed slim-scroll scroll-smooth"
                          style={{maxHeight: '500px'}}>
                         {transcript.map((line, idx) => {
                             const isLineActive = currentTime >= line.start && currentTime <= line.end;
                             return (
                                 <div key={idx} data-index={idx}
-                                     className={`p-2 rounded-lg transition-all duration-300 ${isLineActive ? 'bg-stone-100 shadow-inner' : ''}`}>
-                                    <div className="flex flex-wrap gap-x-1">
+                                     className={`p-2 rounded-lg transition-all duration-300 ${isLineActive ? 'shadow-inner' : ''}`}
+                                     style={isLineActive ? { backgroundColor: '#e8ddd4' } : {}}>
+                                    <div className="flex flex-wrap gap-x-1 text-base leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
                                         {line.words.map((w, wIdx) => (
                                             <span
                                                 key={wIdx}
                                                 onClick={() => handleWordClick(w.start)}
-                                                className={`px-1 rounded transition-colors text-lg cursor-pointer japanese-text ${currentTime >= w.start && currentTime <= w.end ? 'bg-orange-200 font-bold' : ''}`}
+                                                className={`px-0 rounded transition-colors text-base cursor-pointer ${currentTime >= w.start && currentTime <= w.end ? 'bg-orange-200 font-bold' : ''}`}
                                                 style={{color: colors.text}}
                                             >
                                                 {w.word}

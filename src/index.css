@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
-/* Apply Noto Sans JP globally */
+/* Apply Noto Sans JP - 简洁现代的日文字体 */
 * {
     font-family: 'Noto Sans JP', sans-serif;
 }
 
-/* Equal character width for Japanese text */
+/* Japanese text styling */
 .japanese-text {
     font-family: 'Noto Sans JP', sans-serif;
     letter-spacing: 0.05em;
 }
+
 
 /* Furigana (Ruby text) styling for Japanese reading aids */
 ruby {
