@@ -167,12 +167,19 @@ export default function Mp3ToText() {
         formData.append("role", currentRole);
         try {
             const response = await fetch("http://localhost:8000/transcribe", {method: "POST", body: formData});
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
             const result = await response.json();
+            const transcriptData = result.data || result;
+            if (!Array.isArray(transcriptData)) {
+                throw new Error("Invalid response format");
+            }
             setAudioUrl(URL.createObjectURL(file));
-            setTranscript(result.data || result);
-            // eslint-disable-next-line no-unused-vars
-        } catch (e) {
-            alert("识别失败");
+            setTranscript(transcriptData);
+        } catch (err) {
+            console.error("Transcription error:", err);
+            alert("识别失败，请重试");
         } finally {
             setLoading(false);
         }
