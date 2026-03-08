@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Languages, Search, Play, Square, ChevronDown, ChevronRight } from 'lucide-react';
+import WordLookup, {WordLookupPanel} from '../components/WordLookup';
 
 const colors = {
     background: '#f7f5f0',
@@ -112,6 +113,9 @@ export default function VerbeConjugation() {
     const audioRef     = useRef(null);
     const queueRef     = useRef([]);
     const sectionRef   = useRef(null); // 'basic' | 'aux'
+
+    // Word lookup
+    const {lookup, hideLookup, inflectionMode, toggleMode, fetchDictionaryData, handleTextSelection, getMoraList, parseAccentPattern} = WordLookup();
 
     // ── Search ────────────────────────────────────────────────────────────
     const handleSearch = async () => {
@@ -279,7 +283,7 @@ export default function VerbeConjugation() {
             <div className="vc-row flex flex-wrap items-center gap-3">
                 <Languages size={18} style={{ color: colors.primary }} />
                 <h2 className="text-sm font-bold tracking-wide" style={{ color: colors.text }}>
-                    VERBE CONJUGATION
+                    VERB CONJUGATION
                 </h2>
 
                 <input
@@ -288,7 +292,7 @@ export default function VerbeConjugation() {
                     onChange={e => setQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearch()}
                     placeholder="動詞を入力... 例: 食べる / はってん"
-                    className="flex-1 min-w-40 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                    className="flex-[0.6] min-w-40 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
                     style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
                 />
                 <button
@@ -302,7 +306,7 @@ export default function VerbeConjugation() {
                 </button>
 
                 {verbInfo && (
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl border"
+                    <div className="flex-[1] flex items-center gap-3 px-4 py-2 rounded-xl border"
                          style={{ borderColor: colors.border, backgroundColor: colors.highlight }}>
                         <span className="font-bold text-base" style={{ color: colors.text }}>{verbInfo.verb}</span>
                         <span className="text-sm" style={{ color: colors.textLight }}>【{verbInfo.reading}】</span>
@@ -368,7 +372,7 @@ export default function VerbeConjugation() {
                                 : <><Play   size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
                         </button>
                     </div>
-                    <div className="flex-1 overflow-y-auto vc-scrollbar">
+                    <div onMouseUp={handleTextSelection} className="flex-1 overflow-y-auto vc-scrollbar cursor-text">
                         {!conjugations ? (
                             <div className="h-full flex items-center justify-center">
                                 <span className="text-sm" style={{ color: colors.textLight }}>動詞を検索してください</span>
@@ -480,13 +484,13 @@ export default function VerbeConjugation() {
                                 : <><Play   size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
                         </button>
                     </div>
-                    <div className="flex-1 overflow-y-auto vc-scrollbar">
+                    <div className="flex-1 overflow-y-auto vc-scrollbar cursor-text">
                         {!conjugations ? (
                             <div className="h-full flex items-center justify-center">
                                 <span className="text-sm" style={{ color: colors.textLight }}>動詞を検索してください</span>
                             </div>
                         ) : (
-                            <table className="w-full border-collapse text-sm">
+                            <table onMouseUp={handleTextSelection} className="w-full border-collapse text-sm">
                                 <tbody>
                                 {AUX_CATEGORIES.flatMap(cat =>
                                     cat.forms
@@ -513,6 +517,16 @@ export default function VerbeConjugation() {
                     </div>
                 </div>
             </div>
+
+            <WordLookupPanel 
+                lookup={lookup} 
+                inflectionMode={inflectionMode} 
+                toggleMode={toggleMode} 
+                hideLookup={hideLookup}
+                fetchDictionaryData={fetchDictionaryData}
+                getMoraList={getMoraList}
+                parseAccentPattern={parseAccentPattern}
+            />
         </div>
     );
 }
