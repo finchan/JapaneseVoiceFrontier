@@ -115,7 +115,7 @@ function App() {
                         {/* Other Menu Items */}
                         {[
                             { id: 'TEXT/VOICE', icon: FileText },
-                            { id: 'VERBE CONJUGATION', icon: Languages }
+                            { id: 'VERB CONJUGATION', icon: Languages }
                         ].map((item) => {
                             const Icon = item.icon;
                             const isActive = activeMenu === item.id;
@@ -156,7 +156,7 @@ function App() {
                     {activeMenu === 'MP3 MANAGEMENT' && <Mp3Management />}
                     {activeMenu === 'MP3 SOURCES' && <Mp3Sources />}
                     {activeMenu === 'TEXT/VOICE' && <TextToVoice />}
-                    {activeMenu === 'VERBE CONJUGATION' && <VerbeConjugation />}
+                    {activeMenu === 'VERB CONJUGATION' && <VerbeConjugation />}
                 </div>
             </div>
         </div>
