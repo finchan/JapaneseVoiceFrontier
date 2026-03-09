@@ -23,7 +23,6 @@ const BASIC_FORMS = [
     { key: 'ば形',   label: 'ば形'   },
     { key: '意向形',  label: '意向形'  },
     { key: '命令形',  label: '命令形'  },
-    { key: '命令形_せよ', label: '命令形(せよ)' },
     { key: '禁止形',  label: '禁止形'  },
     { key: '可能形',  label: '可能形'  },
     { key: '受身形',  label: '受身形'  },
@@ -136,7 +135,7 @@ export default function VerbeConjugation() {
             const r2   = await fetch('http://localhost:8000/api/verbs/conjugate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ verb: d1.verb_info.verb, type: d1.verb_info.type }),
+                body: JSON.stringify({ verb: d1.verb_info.reading, type: d1.verb_info.type }),
             });
             const d2   = await r2.json();
             setConj(d2.conjugations);
@@ -291,7 +290,7 @@ export default function VerbeConjugation() {
                     onChange={e => setQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearch()}
                     placeholder="動詞を入力... 例: 食べる / はってん"
-                    className="w-80 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                    className="w-72 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
                     style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
                 />
                 <button
@@ -305,10 +304,10 @@ export default function VerbeConjugation() {
                 </button>
 
                 {verbInfo && (
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl border"
+                    <div className="flex-[1.1] flex items-center justify-end gap-3 px-4 py-2 rounded-xl border"
                          style={{ borderColor: colors.border, backgroundColor: colors.highlight }}>
-                        <span className="font-bold text-base" style={{ color: colors.text }}>{verbInfo.verb}</span>
-                        <span className="text-sm" style={{ color: colors.textLight }}>【{verbInfo.reading}】</span>
+                        <span className="font-bold text-xs" style={{ color: colors.text }}>{verbInfo.verb}</span>
+                        <span className="text-xs" style={{ color: colors.textLight }}>【{verbInfo.reading}】</span>
                         <span className="px-2 py-0.5 rounded-full text-xs font-bold"
                               style={{ backgroundColor: colors.primary, color: '#fff' }}>{verbInfo.type}</span>
                         {verbInfo.meaning && (
@@ -340,9 +339,7 @@ export default function VerbeConjugation() {
                             {allBasicOn ? '全解除' : '全選'}
                         </button>
                     </div>
-                    {BASIC_FORMS.map(f => {
-                        if (f.key === '命令形_せよ' && verbInfo?.type !== 'suru') return null;
-                        return (
+                    {BASIC_FORMS.map(f => (
                         <label key={f.key}
                                className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:bg-stone-100">
                             <input type="checkbox"
@@ -351,8 +348,7 @@ export default function VerbeConjugation() {
                                    className="accent-[#9c8c7d] w-3 h-3" />
                             <span className="text-xs" style={{ color: colors.text }}>{f.label}</span>
                         </label>
-                        );
-                    })}
+                    ))}
                 </div>
 
                 <div style={{ width: 1, backgroundColor: colors.border, flexShrink: 0 }} />
@@ -382,10 +378,7 @@ export default function VerbeConjugation() {
                         ) : (
                             <table className="w-full border-collapse text-sm">
                                 <tbody>
-                                {BASIC_FORMS.filter(f => {
-                                    if (f.key === '命令形_せよ' && verbInfo?.type !== 'suru') return false;
-                                    return basicSelected[f.key];
-                                }).map(f => {
+                                {BASIC_FORMS.filter(f => basicSelected[f.key]).map(f => {
                                     const form = conjugations[f.key] || '—';
                                     const k    = `basic_${f.key}`;
                                     return (
