@@ -135,7 +135,7 @@ export default function VerbConjugation() {
             const r2   = await fetch('http://localhost:8000/api/verbs/conjugate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ verb: d1.verb_info.verb, type: d1.verb_info.type }),
+                body: JSON.stringify({ verb: d1.verb_info.reading, type: d1.verb_info.type }),
             });
             const d2   = await r2.json();
             setConj(d2.conjugations);
