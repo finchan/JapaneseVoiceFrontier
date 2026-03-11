@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, FileText, Languages, ChevronDown, UserCircle, LogOut, Settings, Database } from 'lucide-react';
+import { Volume2, FileText, Languages, ChevronDown, UserCircle, LogOut, Settings, Database, Upload, BookOpen, FileType, List } from 'lucide-react';
 import Login from './pages/Login';
-import Mp3ToText from './pages/Mp3ToText';
-import TextToVoice from './pages/TextToVoice';
-import VerbeConjugation from './pages/VerbeConjugation';
-import Mp3Management from './pages/Mp3Management';
-import Mp3Sources from './pages/Mp3Sources';
+import VoiceUpload from './pages/VoiceUpload';
+import TextSubmit from './pages/TextSubmit';
+import VerbConjugation from './pages/VerbConjugation';
+import VoiceManagement from './pages/VoiceManagement';
+import VoicePool from './pages/VoicePool';
+import AdjectiveI from './pages/AdjectiveI';
+import AdjectiveNa from './pages/AdjectiveNa';
 
 const colors = {
     background: '#f7f5f0',
@@ -15,15 +17,42 @@ const colors = {
     text: '#6b5b5b',
     textLight: '#8a7a6a',
     border: '#e6e0d8',
+    highlight: '#637382',
 };
 
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [role, setRole] = useState('Guest');
-    const [activeMenu, setActiveMenu] = useState('MP3/TEXT');
-    const [isMp3SubMenuOpen, setIsMp3SubMenuOpen] = useState(false);
+    const [activeMenu, setActiveMenu] = useState('VOICE POOL');
+    const [activeFirstLevel, setActiveFirstLevel] = useState('VOICE/TEXT');
+    const [openSubMenu, setOpenSubMenu] = useState(null);
 
-    const mp3MenuRef = useRef(null);
+    const menuRef = useRef(null);
+
+    const menuStructure = [
+        {
+            id: 'VOICE/TEXT',
+            submenus: [
+                { id: 'VOICE POOL', icon: Database, page: 'VoicePool' },
+                { id: 'VOICE UPLOAD', icon: Upload, page: 'VoiceUpload' },
+                { id: 'VOICE MANAGEMENT', icon: Settings, page: 'VoiceManagement' },
+            ]
+        },
+        {
+            id: 'TEXT/VOICE',
+            submenus: [
+                { id: 'TEXT SUBMIT', icon: FileText, page: 'TextSubmit' },
+            ]
+        },
+        {
+            id: 'CONJUGATION',
+            submenus: [
+                { id: 'VERB', icon: BookOpen, page: 'VerbConjugation' },
+                { id: 'ADJECTIVE I', icon: FileType, page: 'AdjectiveI' },
+                { id: 'ADJECTIVE NA', icon: List, page: 'AdjectiveNa' },
+            ]
+        },
+    ];
 
     useEffect(() => {
         // Check if user is already logged in
@@ -34,8 +63,8 @@ function App() {
         }
 
         const handleClickOutside = (e) => {
-            if (mp3MenuRef.current && !mp3MenuRef.current.contains(e.target)) {
-                setIsMp3SubMenuOpen(false);
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setOpenSubMenu(null);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -46,7 +75,7 @@ function App() {
         localStorage.setItem('user_role', selectedRole.toLowerCase());
         setRole(selectedRole);
         setIsAuthenticated(true);
-        setActiveMenu('MP3/TEXT'); // Set welcome page
+        setActiveMenu('VOICE POOL');
     };
 
     const handleLogout = () => {
@@ -70,72 +99,57 @@ function App() {
                     </div>
 
                     {/* Main Menu */}
-                    <div className="flex items-center gap-2 h-full">
-                        {/* MP3/TEXT with Submenu */}
-                        <div
-                            className="relative h-full flex items-center"
-                            ref={mp3MenuRef}
-                            onMouseEnter={() => setIsMp3SubMenuOpen(true)}
-                            onMouseLeave={() => setIsMp3SubMenuOpen(false)}
-                        >
-                            <button
-                                onClick={() => setActiveMenu('MP3/TEXT')}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 ${
-                                    activeMenu.startsWith('MP3') ? 'shadow-md scale-105' : 'hover:bg-stone-50'
-                                }`}
-                                style={{
-                                    backgroundColor: activeMenu.startsWith('MP3') ? colors.primary : 'transparent',
-                                    color: activeMenu.startsWith('MP3') ? '#ffffff' : colors.textLight
-                                }}
+                    <div className="flex items-center gap-2 h-full" ref={menuRef}>
+                        {/* First Level Menus */}
+                        {menuStructure.map((menu) => (
+                            <div
+                                key={menu.id}
+                                className="relative h-full flex items-center"
+                                onMouseEnter={() => setOpenSubMenu(menu.id)}
+                                onMouseLeave={() => setOpenSubMenu(null)}
                             >
-                                <Volume2 size={16} />
-                                <span className="text-sm">MP3/TEXT</span>
-                                <ChevronDown size={14} className={`transition-transform duration-300 ${isMp3SubMenuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {/* Submenu */}
-                            {isMp3SubMenuOpen && (
-                                <div className="absolute top-full left-0 w-48 bg-white border border-stone-200 rounded-xl shadow-2xl py-2 z-[1100] animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <button
-                                        onClick={() => { setActiveMenu('MP3 MANAGEMENT'); setIsMp3SubMenuOpen(false); }}
-                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-500 hover:bg-stone-50 hover:text-stone-900 font-bold transition-colors"
-                                    >
-                                        <Settings size={14} /> MP3 MANAGEMENT
-                                    </button>
-                                    <button
-                                        onClick={() => { setActiveMenu('MP3 SOURCES'); setIsMp3SubMenuOpen(false); }}
-                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-500 hover:bg-stone-50 hover:text-stone-900 font-bold border-t border-stone-100 transition-colors"
-                                    >
-                                        <Database size={14} /> MP3 SOURCES
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Other Menu Items */}
-                        {[
-                            { id: 'TEXT/VOICE', icon: FileText },
-                            { id: 'VERB CONJUGATION', icon: Languages }
-                        ].map((item) => {
-                            const Icon = item.icon;
-                            const isActive = activeMenu === item.id;
-                            return (
                                 <button
-                                    key={item.id}
-                                    onClick={() => setActiveMenu(item.id)}
                                     className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 ${
-                                        isActive ? 'shadow-md scale-105' : 'hover:bg-stone-50'
+                                        activeFirstLevel === menu.id ? 'shadow-md scale-105' : 'hover:bg-stone-50'
                                     }`}
                                     style={{
-                                        backgroundColor: isActive ? colors.primary : 'transparent',
-                                        color: isActive ? '#ffffff' : colors.textLight
+                                        backgroundColor: activeFirstLevel === menu.id ? colors.highlight : 'transparent',
+                                        color: activeFirstLevel === menu.id ? '#ffffff' : colors.textLight
                                     }}
                                 >
-                                    <Icon size={16} />
-                                    <span className="text-sm">{item.id}</span>
+                                    <span className="text-sm">{menu.id}</span>
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${openSubMenu === menu.id ? 'rotate-180' : ''}`} />
                                 </button>
-                            );
-                        })}
+
+                                {/* Submenu */}
+                                {openSubMenu === menu.id && menu.submenus && (
+                                    <div className="absolute top-full left-0 w-52 bg-white border border-stone-200 rounded-xl shadow-2xl py-2 z-[1100] animate-in fade-in slide-in-from-top-2 duration-200">
+                                        {menu.submenus.map((submenu, index) => {
+                                            const Icon = submenu.icon;
+                                            const isActive = activeMenu === submenu.id;
+                                            return (
+                                                <button
+                                                    key={submenu.id}
+                                                    onClick={() => { 
+                                                        setActiveMenu(submenu.id); 
+                                                        setActiveFirstLevel(menu.id);
+                                                        setOpenSubMenu(null);
+                                                    }}
+                                                    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors ${
+                                                        isActive 
+                                                            ? 'bg-stone-100 text-stone-800' 
+                                                            : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900'
+                                                    } ${index > 0 ? 'border-t border-stone-100' : ''}`}
+                                                >
+                                                    <Icon size={14} />
+                                                    {submenu.id}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
 
                     {/* Exit Button */}
@@ -152,11 +166,13 @@ function App() {
             {/* Content Area */}
             <div className="p-4 md:p-5">
                 <div className="max-w-5xl mx-auto">
-                    {activeMenu === 'MP3/TEXT' && <Mp3ToText />}
-                    {activeMenu === 'MP3 MANAGEMENT' && <Mp3Management />}
-                    {activeMenu === 'MP3 SOURCES' && <Mp3Sources />}
-                    {activeMenu === 'TEXT/VOICE' && <TextToVoice />}
-                    {activeMenu === 'VERB CONJUGATION' && <VerbeConjugation />}
+                    {activeMenu === 'VOICE POOL' && <VoicePool />}
+                    {activeMenu === 'VOICE UPLOAD' && <VoiceUpload />}
+                    {activeMenu === 'VOICE MANAGEMENT' && <VoiceManagement />}
+                    {activeMenu === 'TEXT SUBMIT' && <TextSubmit />}
+                    {activeMenu === 'VERB' && <VerbConjugation />}
+                    {activeMenu === 'ADJECTIVE I' && <AdjectiveI />}
+                    {activeMenu === 'ADJECTIVE NA' && <AdjectiveNa />}
                 </div>
             </div>
         </div>
