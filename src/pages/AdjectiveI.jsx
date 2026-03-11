@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Languages, Search, Play, Square } from 'lucide-react';
 
 const colors = {
