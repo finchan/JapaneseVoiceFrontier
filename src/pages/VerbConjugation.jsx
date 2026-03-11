@@ -23,7 +23,6 @@ const BASIC_FORMS = [
     { key: 'ば形',   label: 'ば形'   },
     { key: '意向形',  label: '意向形'  },
     { key: '命令形',  label: '命令形'  },
-    { key: '命令形_せよ', label: '命令形(せよ)' },
     { key: '禁止形',  label: '禁止形'  },
     { key: '可能形',  label: '可能形'  },
     { key: '受身形',  label: '受身形'  },
@@ -291,13 +290,13 @@ export default function VerbConjugation() {
                     onChange={e => setQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearch()}
                     placeholder="動詞を入力... 例: 食べる / はってん"
-                    className="w-80 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                    className="w-72 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
                     style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
                 />
                 <button
                     onClick={handleSearch}
                     disabled={searchStatus === 'loading'}
-                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60"
+                    className="flex items-center gap-2 px-5 py-2 rounded-full text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60"
                     style={{ backgroundColor: colors.primary }}
                 >
                     <Search size={14} />
@@ -305,12 +304,17 @@ export default function VerbConjugation() {
                 </button>
 
                 {verbInfo && (
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl border"
+                    <div className="w-80 flex items-center gap-3 px-4 py-2 rounded-xl border"
                          style={{ borderColor: colors.border, backgroundColor: colors.highlight }}>
-                        <span className="font-bold text-base" style={{ color: colors.text }}>{verbInfo.verb}</span>
+                        <span className="font-bold text-xs" style={{ color: colors.text }}>{verbInfo.verb}</span>
                         <span className="text-xs" style={{ color: colors.textLight }}>【{verbInfo.reading}】</span>
                         <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                              style={{ backgroundColor: colors.primary, color: '#fff' }}>{verbInfo.type}</span>
+                              style={{ backgroundColor: colors.primary, color: '#fff' }}>{
+                              verbInfo.type === 'godan' ? '❺' :
+                              verbInfo.type === 'ichidan' ? '❶' :
+                              verbInfo.type === 'suru' ? 'サ' :
+                              verbInfo.type === 'kuru' ? 'カ' : verbInfo.type
+                        }</span>
                         {verbInfo.meaning && (
                             <span className="text-xs" style={{ color: colors.textLight }}>{verbInfo.meaning}</span>
                         )}

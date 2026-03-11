@@ -123,7 +123,7 @@ export default function TextSubmit() {
                     <button
                         onClick={handleConvert}
                         disabled={status === 'loading'}
-                        className="flex items-center gap-2 px-10 py-3 rounded-full text-white font-bold shadow-lg transition-all active:scale-95 hover:brightness-110 text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-bold text-sm transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ backgroundColor: colors.primary }}
                     >
                         <Send size={16} />

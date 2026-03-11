@@ -246,7 +246,7 @@ export default function VoiceUpload() {
                 <label htmlFor="audio-upload" className="cursor-pointer flex items-center gap-2">
                     {loading ? <Loader2 className="animate-spin" style={{color: colors.primary}}/> :
                         <Upload size={16} style={{color: colors.textLight}}/>}
-                    <span className="text-stone-900 text-xs">UPLOAD MP3 TO BEGIN PRACTICE</span>
+                    <span className="font-bold text-stone-900 text-large">UPLOAD MP3</span>
                 </label>
             </div>
 
