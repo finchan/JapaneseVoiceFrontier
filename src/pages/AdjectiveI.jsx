@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Languages, Search, Play, Square } from 'lucide-react';
+import API_CONFIG from '../config';
 
 const colors = {
     background: '#f7f5f0',
@@ -71,7 +72,7 @@ export default function AdjectiveI() {
         setAdjIInfo(null);
         setConj(null);
         try {
-            const r1 = await fetch('http://localhost:8000/api/adjectives-i/search', {
+            const r1 = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.adjectivesISearch), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adj_i: q }),
@@ -80,7 +81,7 @@ export default function AdjectiveI() {
             if (!d1.found) { setSearchStatus('notfound'); return; }
             setAdjIInfo(d1.adj_i_info);
 
-            const r2 = await fetch('http://localhost:8000/api/adjectives-i/conjugate', {
+            const r2 = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.adjectivesIConjugate), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adj_i: d1.adj_i_info.reading }),
@@ -103,7 +104,7 @@ export default function AdjectiveI() {
     const playOnce = async (text, key, onDone) => {
         setPlayingKey(key);
         try {
-            const res = await fetch('http://localhost:8000/api/tts-stream', {
+            const res = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.ttsStream), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text }),

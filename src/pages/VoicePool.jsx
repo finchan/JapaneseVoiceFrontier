@@ -2,6 +2,7 @@ import React, {useState, useEffect, useRef} from "react";
 import WaveSurfer from "wavesurfer.js";
 import {BookOpen, Layers, FileAudio, Play, Pause, Loader2, RotateCcw, Gauge} from "lucide-react";
 import WordLookup, {WordLookupPanel} from '../components/WordLookup';
+import API_CONFIG from '../config';
 
 
 const colors = {
@@ -117,7 +118,7 @@ export default function VoicePool() {
     }, [currentTime]);
 
     useEffect(() => {
-        fetch("http://localhost:8000/api/sources/books")
+        fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.sourcesBooks))
             .then(res => res.json())
             .then(data => setBooks(data.books || []));
     }, []);
@@ -128,7 +129,7 @@ export default function VoicePool() {
         setSelectedFile(null);
         setCourses([]);
         setFiles([]);
-        fetch(`http://localhost:8000/api/sources/courses?book=${encodeURIComponent(book)}`)
+        fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.sourcesCourses) + `?book=${encodeURIComponent(book)}`)
             .then(res => res.json())
             .then(data => setCourses(data.courses || []));
     };
@@ -137,7 +138,7 @@ export default function VoicePool() {
         setSelectedCourse(course);
         setSelectedFile(null);
         setFiles([]);
-        fetch(`http://localhost:8000/api/sources/files?book=${encodeURIComponent(selectedBook)}&course=${encodeURIComponent(course)}`)
+        fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.sourcesFiles) + `?book=${encodeURIComponent(selectedBook)}&course=${encodeURIComponent(course)}`)
             .then(res => res.json())
             .then(data => setFiles(data.files || []));
     };
@@ -151,7 +152,7 @@ export default function VoicePool() {
 
         try {
             const params = new URLSearchParams({ book: selectedBook, course: selectedCourse, filename: fileObj.name });
-            const res = await fetch(`http://localhost:8000/api/sources/load_content?${params}`);
+            const res = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.sourcesLoadContent) + `?${params}`);
             const data = await res.json();
             setSegments(data.segments || []);
 

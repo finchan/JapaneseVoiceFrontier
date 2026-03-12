@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {Book, FolderOpen, Tag, Save, Loader2} from 'lucide-react';
+import API_CONFIG from '../config';
 
 const colors = {
     background: '#f7f5f0',
@@ -26,7 +27,7 @@ export default function VoiceManagement() {
 
     const fetchFiles = async () => {
         try {
-            const response = await fetch('http://localhost:8000/api/manage/files');
+            const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.manageFiles));
             const data = await response.json();
             setMp3Files(data.files);
             // 默认选中第一个
@@ -62,7 +63,7 @@ export default function VoiceManagement() {
 
         try {
             setLoading(true); // 开始加载动画
-            const response = await fetch('http://localhost:8000/api/manage/submit', {
+            const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.manageSubmit), {
                 method: 'POST',
                 body: submitData
             });

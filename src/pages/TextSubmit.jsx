@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Send } from 'lucide-react';
+import API_CONFIG from '../config';
 
 // Morandi color palette
 const colors = {
@@ -36,7 +37,7 @@ export default function TextSubmit() {
             formData.append('text', text);
             formData.append('role', role);
 
-        const res = await fetch('http://localhost:8000/api/convert', {
+        const res = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.convert), {
                 method: 'POST',
                 body: formData,
             });

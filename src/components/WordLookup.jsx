@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Loader2, Search, X, MousePointer2} from 'lucide-react';
+import API_CONFIG from '../config';
 
 const colors = {
     morandiNeonGreen: '#F2EBBF',
@@ -82,7 +83,7 @@ export default function WordLookup() {
     const fetchDictionaryData = async (queryText) => {
         setLookup(prev => ({...prev, loading: true, text: queryText, candidates: []}));
         try {
-            const response = await fetch(`http://localhost:8000/translate_mazii?keyword=${encodeURIComponent(queryText)}`);
+            const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.translateMazii) + `?keyword=${encodeURIComponent(queryText)}`);
             const json = await response.json();
             setLookup(prev => ({...prev, loading: false, data: json.data?.[0] || null}));
         } catch {

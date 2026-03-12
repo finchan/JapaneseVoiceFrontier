@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import {Play, Pause, Upload, Loader2, RotateCcw, Gauge} from 'lucide-react';
 import WordLookup, {WordLookupPanel} from '../components/WordLookup';
+import API_CONFIG from '../config';
 
 // Morandi color scheme
 const colors = {
@@ -166,7 +167,7 @@ export default function VoiceUpload() {
         const currentRole = localStorage.getItem('user_role') || 'guest';
         formData.append("role", currentRole);
         try {
-            const response = await fetch("http://localhost:8000/transcribe", {method: "POST", body: formData});
+            const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.transcribe), {method: "POST", body: formData});
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status}`);
             }

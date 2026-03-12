@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Languages, Search, Play, Square } from 'lucide-react';
+import API_CONFIG from '../config';
 
 const colors = {
     background: '#f7f5f0',
@@ -71,7 +72,7 @@ export default function AdjectiveNa() {
         setAdjNaInfo(null);
         setConj(null);
         try {
-            const r1 = await fetch('http://localhost:8000/api/adjectives-na/search', {
+            const r1 = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.adjectivesNaSearch), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adj_na: q }),
@@ -80,10 +81,10 @@ export default function AdjectiveNa() {
             if (!d1.found) { setSearchStatus('notfound'); return; }
             setAdjNaInfo(d1.adj_na_info);
 
-            const r2 = await fetch('http://localhost:8000/api/adjectives-na/conjugate', {
+            const r2 = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.adjectivesNaConjugate), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ adj_na: d1.adj_na_info.adj_na }),
+                body: JSON.stringify({ adj_na: d1.adj_na_info.reading }),
             });
             const d2 = await r2.json();
             setConj(d2.conjugations);
@@ -103,7 +104,7 @@ export default function AdjectiveNa() {
     const playOnce = async (text, key, onDone) => {
         setPlayingKey(key);
         try {
-            const res = await fetch('http://localhost:8000/api/tts-stream', {
+            const res = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.ttsStream), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text }),

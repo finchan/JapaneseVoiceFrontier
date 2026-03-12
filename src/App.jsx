@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, FileText, Languages, ChevronDown, UserCircle, LogOut, Settings, Database, Upload, BookOpen, FileType, List } from 'lucide-react';
 import Login from './pages/Login';
+import Welcome from './pages/Welcome';
 import VoiceUpload from './pages/VoiceUpload';
 import TextSubmit from './pages/TextSubmit';
 import VerbConjugation from './pages/VerbConjugation';
@@ -23,7 +24,7 @@ const colors = {
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [role, setRole] = useState('Guest');
-    const [activeMenu, setActiveMenu] = useState('VOICE POOL');
+    const [activeMenu, setActiveMenu] = useState('WELCOME');
     const [activeFirstLevel, setActiveFirstLevel] = useState('VOICE/TEXT');
     const [openSubMenu, setOpenSubMenu] = useState(null);
 
@@ -75,7 +76,7 @@ function App() {
         localStorage.setItem('user_role', selectedRole.toLowerCase());
         setRole(selectedRole);
         setIsAuthenticated(true);
-        setActiveMenu('VOICE POOL');
+        setActiveMenu('WELCOME');
     };
 
     const handleLogout = () => {
@@ -166,6 +167,7 @@ function App() {
             {/* Content Area */}
             <div className="p-4 md:p-5">
                 <div className="max-w-5xl mx-auto">
+                    {activeMenu === 'WELCOME' && <Welcome />}
                     {activeMenu === 'VOICE POOL' && <VoicePool />}
                     {activeMenu === 'VOICE UPLOAD' && <VoiceUpload />}
                     {activeMenu === 'VOICE MANAGEMENT' && <VoiceManagement />}

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Languages, Search, Play, Square, ChevronDown, ChevronRight } from 'lucide-react';
+import API_CONFIG from '../config';
 
 const colors = {
     background: '#f7f5f0',
@@ -123,7 +124,7 @@ export default function VerbConjugation() {
         setVerbInfo(null);
         setConj(null);
         try {
-            const r1   = await fetch('http://localhost:8000/api/verbs/search', {
+            const r1   = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.verbsSearch), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ verb: q }),
@@ -132,7 +133,7 @@ export default function VerbConjugation() {
             if (!d1.found) { setSearchStatus('notfound'); return; }
             setVerbInfo(d1.verb_info);
 
-            const r2   = await fetch('http://localhost:8000/api/verbs/conjugate', {
+            const r2   = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.verbsConjugate), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ verb: d1.verb_info.reading, type: d1.verb_info.type }),
@@ -148,17 +149,15 @@ export default function VerbConjugation() {
     // ── TTS core ──────────────────────────────────────────────────────────
     const stopAll = () => {
         queueRef.current = [];
-        sectionRef.current = null;
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
         setPlayingKey(null);
         setPlayAllBasic(false);
-        setPlayAllAux(false);
     };
 
     const playOnce = async (text, key, onDone) => {
         setPlayingKey(key);
         try {
-            const res  = await fetch('http://localhost:8000/api/tts-stream', {
+            const res  = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.ttsStream), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text }),
