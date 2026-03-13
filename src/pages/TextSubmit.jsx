@@ -88,7 +88,7 @@ export default function TextSubmit() {
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-8">
                     <FileText size={18} style={{ color: colors.primary }} />
-                    <h2 className="text-base font-bold" style={{ color: colors.text }}>TEXT TO VOICE</h2>
+                    <h2 className="text-2xl font-bold" style={{ color: colors.text }}>TEXT TO VOICE</h2>
                 </div>
 
                 {/* Hint */}

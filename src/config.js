@@ -1,13 +1,13 @@
 // API Configuration
 // 修改此配置以切换开发/生产环境
 
-const TESTING        = "http://localhost:8000"
-const PRODUCTION_IP  = "http://118.25.106.35:8000"
-const PRODUCTION_DOMAIN     = "https://tasche.top"
+const TESTING        = "http://localhost:8000"                                   // Python config.py ENV = "TEST"
+const PRODUCTION_DOMAIN     = "https://tasche.top:8000"         // Python config.py ENV = "PROD_DM"
+const PRODUCTION_IP  = "http://118.25.106.35:8000"                    // Python config.py ENV = "PROD_IP"
 
 const API_CONFIG = {
 
-    baseURL: PRODUCTION_IP,
+    baseURL: TESTING,
     
     // API 端点
     endpoints: {
