@@ -240,9 +240,8 @@ export default function VoiceUpload() {
         <div className="space-y-6 relative">
             <style>{customStyles}</style>
 
-            <div className="flex items-center justify-center rounded-full p-2 text-sm"
-                 style={{padding: '15px', height: '80px', borderColor: colors.border, background: 'radial-gradient(circle at center, #e8e4df 0%, #dce4e8 100%)'}}>
-                因为我的Centos服务器的内存只有2GB，运行服务器离线Whisper Medium模型借助硬盘处理，所以处理处理比较慢，同时因为服务器计算种类不支持int16，只可以用int8，识别日语汉字不多（int16可以识别转换更多汉字）。建议在本机安装Whisper Medium模型，这里假设本机安装Whisper Medium模型。可以从这里下载本地处理工具。工具不会固定使用日语限定，可以随意指定处理语言。
+            <div className="flex items-center justify-center rounded-full p-2 text-sm">
+                服务器的内存只有2GB，离线运行faster-whisper-large-v3-turbo-ct2模型，没有GPU，双核CPU借助硬盘处理。
             </div>
 
             <div className="flex items-center justify-center border-2 border-dashed rounded-full p-2 gap-3"
