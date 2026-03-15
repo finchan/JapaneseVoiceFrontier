@@ -168,38 +168,44 @@ export default function AdjectiveNa() {
                 .vc-scrollbar::-webkit-scrollbar { width: 4px; }
                 .vc-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .vc-scrollbar::-webkit-scrollbar-thumb { background: #c4b4a4; border-radius: 10px; }
-                .vc-row { background: ${colors.white}; border: 1px solid ${colors.border}; border-radius: 24px; padding: 20px 24px; }
+                .vc-row { background: ${colors.white}; border: 1px solid ${colors.border}; border-radius: 12px; padding: 20px 24px; }
                 .vc-tr:hover { background: ${colors.highlight}; }
             `}</style>
 
             {/* ROW 1: Search */}
-            <div className="vc-row flex flex-wrap items-center gap-3">
-                <Languages size={18} style={{ color: colors.primary }} />
-                <h2 className="text-sm font-bold tracking-wide" style={{ color: colors.text }}>
-                    ADJECTIVE NA CONJUGATION
-                </h2>
+            <div className="vc-row flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-3">
+                <div className="flex items-center gap-2">
+                    <Languages size={18} style={{ color: colors.primary }} />
+                    <h2 className="text-sm font-bold tracking-wide" style={{ color: colors.text }}>
+                        ADJECTIVE NA CONJUGATION
+                    </h2>
+                </div>
 
-                <input
-                    type="text"
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                    placeholder="な形容词を入力... 例: 静か / しずか"
-                    className="w-68 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
-                    style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
-                />
-                <button
-                    onClick={handleSearch}
-                    disabled={searchStatus === 'loading'}
-                    className="flex items-center gap-2 px-5 py-2 rounded-full text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60"
-                    style={{ backgroundColor: colors.primary }}
-                >
-                    <Search size={14} />
-                    {searchStatus === 'loading' ? '検索中...' : 'SEARCH'}
-                </button>
+                {/* Search bar row */}
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                        placeholder="な形容词を入力... 例: 静か / しずか"
+                        className="flex-1 md:w-64 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                        style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
+                    />
+                    <button
+                        onClick={handleSearch}
+                        disabled={searchStatus === 'loading'}
+                        className="flex items-center gap-2 px-3 md:px-5 py-2 rounded-full text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60"
+                        style={{ backgroundColor: colors.primary }}
+                    >
+                        <Search size={14} />
+                        <span className="hidden md:inline">{searchStatus === 'loading' ? '検索中...' : 'SEARCH'}</span>
+                    </button>
+                </div>
 
+                {/* Search results - Desktop inline, Mobile below */}
                 {adjNaInfo && (
-                    <div className="w-76 flex items-center gap-3 px-4 py-2 rounded-xl border"
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border w-full md:w-auto md:ml-auto"
                          style={{ borderColor: colors.border, backgroundColor: colors.highlight }}>
                         <span className="font-bold text-xs" style={{ color: colors.text }}>{adjNaInfo.adj_na}</span>
                         <span className="text-xs" style={{ color: colors.textLight }}>【{adjNaInfo.reading}】</span>
@@ -216,8 +222,89 @@ export default function AdjectiveNa() {
                 )}
             </div>
 
-            {/* ROW 2: Conjugation Table */}
-            <div className="vc-row flex gap-4" style={{ minHeight: 400 }}>
+            {/* Mobile: Conjugation Section */}
+            <div className="vc-row md:hidden flex flex-col gap-4" style={{ minHeight: 400 }}>
+                    {/* Selector */}
+                    <div className="overflow-y-auto vc-scrollbar" style={{ maxHeight: 160 }}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
+                                基本活用形
+                            </span>
+                            <button
+                                onClick={toggleAllBasic}
+                                className="text-xs px-2 py-0.5 rounded-full border transition-all hover:brightness-105"
+                                style={{ borderColor: colors.border, color: colors.textLight }}
+                            >
+                                {allBasicOn ? '全解除' : '全選'}
+                            </button>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            {BASIC_FORMS.map((f) => {
+                                return (
+                                    <div key={f.key}>
+                                        <div className="flex items-center gap-1 px-1 py-1 rounded-lg hover:bg-stone-100">
+                                            <input type="checkbox"
+                                                   checked={!!basicSelected[f.key]}
+                                                   onChange={() => toggleBasic(f.key)}
+                                                   className="accent-[#9c8c7d] w-3 h-3" />
+                                            <span className="text-xs ml-1 cursor-pointer"
+                                                  style={{ color: colors.text }}>
+                                                {f.label.length > 15 ? f.label.substring(0, 15) + '...' : f.label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="flex-1 flex flex-col min-h-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
+                                活用表
+                            </span>
+                            <button
+                                onClick={() => playAllBasic ? stopAll() : runQueue(basicQueue())}
+                                disabled={!conjugations}
+                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-bold text-xs transition-all active:scale-95 hover:brightness-110 disabled:opacity-40"
+                                style={{ backgroundColor: playAllBasic ? colors.accent : colors.primary }}
+                            >
+                                {playAllBasic
+                                    ? <><Square size={10} fill="#fff" color="#fff" /> STOP</>
+                                    : <><Play   size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto vc-scrollbar">
+                            {!conjugations ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <span className="text-sm" style={{ color: colors.textLight }}>な形容词を検索してください</span>
+                                </div>
+                            ) : (
+                                <table className="w-full border-collapse text-sm">
+                                    <tbody>
+                                    {BASIC_FORMS.filter(f => basicSelected[f.key]).map(f => {
+                                        const form = conjugations[f.key] || '—';
+                                        const k = `basic_${f.key}`;
+                                        return (
+                                            <tr key={f.key} className="vc-tr">
+                                                <td className="py-2 px-2 text-xs" style={{ color: colors.textLight }}>{f.label}</td>
+                                                <td className="py-2 px-2 font-bold text-xs" style={{ color: colors.text }}>{form}</td>
+                                                <td className="py-2 px-2 text-right">
+                                                    <PlayBtn playing={playingKey === k} onPlay={() => playSingle(form, k)} small />
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+            {/* ROW 2: Conjugation Table (Desktop) */}
+            <div className="vc-row hidden md:flex gap-4" style={{ minHeight: 400 }}>
                 {/* Selector */}
                 <div className="flex flex-col gap-0.5" style={{ width: 340, flexShrink: 0 }}>
                     <div className="flex items-center justify-between mb-1">

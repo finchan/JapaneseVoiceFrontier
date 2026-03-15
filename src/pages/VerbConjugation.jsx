@@ -107,6 +107,7 @@ export default function VerbConjugation() {
     const [basicSelected,  setBasicSelected]  = useState(initBasicSelected);
     const [auxSelected,    setAuxSelected]     = useState(initAuxSelected);
     const [collapsedCats,  setCollapsedCats]  = useState({});
+    const [mobileConjTab, setMobileConjTab]  = useState('BASIC');
 
     // TTS
     const [playingKey,   setPlayingKey]   = useState(null);
@@ -272,42 +273,48 @@ export default function VerbConjugation() {
                 .vc-scrollbar::-webkit-scrollbar { width: 4px; }
                 .vc-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .vc-scrollbar::-webkit-scrollbar-thumb { background: #c4b4a4; border-radius: 10px; }
-                .vc-row { background: ${colors.white}; border: 1px solid ${colors.border}; border-radius: 24px; padding: 20px 24px; }
+                .vc-row { background: ${colors.white}; border: 1px solid ${colors.border}; border-radius: 12px; padding: 20px 24px; }
                 .vc-tr:hover { background: ${colors.highlight}; }
             `}</style>
 
             {/* ── ROW 1: Search ──────────────────────────────────────────── */}
-            <div className="vc-row flex flex-wrap items-center gap-3">
-                <Languages size={18} style={{ color: colors.primary }} />
-                <h2 className="text-sm font-bold tracking-wide" style={{ color: colors.text }}>
-                    VERB CONJUGATION
-                </h2>
+            <div className="vc-row flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-3">
+                <div className="flex items-center gap-2">
+                    <Languages size={18} style={{ color: colors.primary }} />
+                    <h2 className="text-sm font-bold tracking-wide" style={{ color: colors.text }}>
+                        VERB CONJUGATION
+                    </h2>
+                </div>
 
-                <input
-                    type="text"
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                    placeholder="動詞を入力... 例: 食べる / はってん"
-                    className="w-72 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
-                    style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
-                />
-                <button
-                    onClick={handleSearch}
-                    disabled={searchStatus === 'loading'}
-                    className="flex items-center gap-2 px-5 py-2 rounded-full text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60"
-                    style={{ backgroundColor: colors.primary }}
-                >
-                    <Search size={14} />
-                    {searchStatus === 'loading' ? '検索中...' : 'SEARCH'}
-                </button>
+                {/* Search bar row */}
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                        placeholder="動詞を入力... 例: 食べる / はってん"
+                        className="flex-1 md:w-72 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                        style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
+                    />
+                    <button
+                        onClick={handleSearch}
+                        disabled={searchStatus === 'loading'}
+                        className="flex items-center gap-2 px-5 py-2 rounded-full text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60"
+                        style={{ backgroundColor: colors.primary }}
+                    >
+                        <Search size={14} />
+                        {searchStatus === 'loading' ? '検索中...' : 'SEARCH'}
+                    </button>
+                </div>
 
+                {/* Search results - Desktop inline, Mobile below */}
                 {verbInfo && (
-                    <div className="w-80 flex items-center gap-3 px-4 py-2 rounded-xl border"
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border w-full md:w-auto md:ml-auto"
                          style={{ borderColor: colors.border, backgroundColor: colors.highlight }}>
                         <span className="font-bold text-xs" style={{ color: colors.text }}>{verbInfo.verb}</span>
                         <span className="text-xs" style={{ color: colors.textLight }}>【{verbInfo.reading}】</span>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold"
+                        <span className="px-1.5 py-0.5 rounded-full text-xs font-bold"
                               style={{ backgroundColor: colors.primary, color: '#fff' }}>{
                               verbInfo.type === 'godan' ? '❺' :
                               verbInfo.type === 'ichidan' ? '❶' :
@@ -327,8 +334,107 @@ export default function VerbConjugation() {
                 )}
             </div>
 
-            {/* ── ROW 2: Basic Conjugations ───────────────────────────────── */}
-            <div className="vc-row flex gap-4" style={{ minHeight: 280 }}>
+            {/* Mobile: Tab Navigation */}
+            <div className="vc-row md:hidden flex">
+                <button
+                    onClick={() => setMobileConjTab('BASIC')}
+                    className={`flex-1 py-3 text-xs font-bold transition-colors ${mobileConjTab === 'BASIC' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                >
+                    基本活用形
+                </button>
+                <button
+                    onClick={() => setMobileConjTab('AUX')}
+                    className={`flex-1 py-3 text-xs font-bold transition-colors ${mobileConjTab === 'AUX' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                >
+                    助动词活用形
+                </button>
+            </div>
+
+            {/* Mobile: Basic Conjugations Section */}
+            {mobileConjTab === 'BASIC' && (
+                <div className="vc-row md:hidden flex flex-col gap-4" style={{ minHeight: 280 }}>
+                    {/* Selector - 4 columns */}
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
+                                基本活用形
+                            </span>
+                            <button
+                                onClick={toggleAllBasic}
+                                className="text-xs px-2 py-0.5 rounded-full border transition-all hover:brightness-105"
+                                style={{ borderColor: colors.border, color: colors.textLight }}
+                            >
+                                {allBasicOn ? '全解除' : '全選'}
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-4 gap-x-2 gap-y-1">
+                            {BASIC_FORMS.map(f => {
+                                if (f.key === '命令形_せよ' && verbInfo?.type !== 'suru') return null;
+                                return (
+                                    <label key={f.key}
+                                           className="flex items-center gap-1 px-1 py-0.5 rounded cursor-pointer hover:bg-stone-100">
+                                        <input type="checkbox"
+                                               checked={!!basicSelected[f.key]}
+                                               onChange={() => toggleBasic(f.key)}
+                                               className="accent-[#9c8c7d] w-3 h-3" />
+                                        <span className="text-xs" style={{ color: colors.text }}>{f.label}</span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Table - Results */}
+                    <div className="flex-1 flex flex-col min-h-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
+                                活用表
+                            </span>
+                            <button
+                                onClick={() => playAllBasic ? stopAll() : runQueue(basicQueue(), 'basic')}
+                                disabled={!conjugations}
+                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-bold text-xs transition-all active:scale-95 hover:brightness-110 disabled:opacity-40"
+                                style={{ backgroundColor: playAllBasic ? colors.accent : colors.primary }}
+                            >
+                                {playAllBasic
+                                    ? <><Square size={10} fill="#fff" color="#fff" /> STOP</>
+                                    : <><Play   size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto vc-scrollbar">
+                            {!conjugations ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <span className="text-sm" style={{ color: colors.textLight }}>動詞を検索してください</span>
+                                </div>
+                            ) : (
+                                <table className="w-full border-collapse text-sm">
+                                    <tbody>
+                                    {BASIC_FORMS.filter(f => {
+                                        if (f.key === '命令形_せよ' && verbInfo?.type !== 'suru') return false;
+                                        return basicSelected[f.key];
+                                    }).map(f => {
+                                        const form = conjugations[f.key] || '—';
+                                        const k    = `basic_${f.key}`;
+                                        return (
+                                            <tr key={f.key} className="vc-tr">
+                                                <td className="py-2 px-3 text-xs whitespace-nowrap" style={{ color: colors.textLight }}>{f.label}</td>
+                                                <td className="py-2 px-3 font-bold text-xs text-left" style={{ color: colors.text }}>{form}</td>
+                                                <td className="py-2 px-3 text-right">
+                                                    <PlayBtn playing={playingKey === k} onPlay={() => playSingle(form, k)} small />
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── ROW 2: Basic Conjugations (Desktop) ───────────────────────────────── */}
+            <div className="vc-row hidden md:flex gap-4" style={{ minHeight: 280 }}>
                 {/* Selector */}
                 <div className="flex flex-col gap-0.5" style={{ width: 340, flexShrink: 0 }}>
                     <div className="flex items-center justify-between mb-1">
@@ -409,8 +515,8 @@ export default function VerbConjugation() {
                 </div>
             </div>
 
-            {/* ── ROW 3: Auxiliaries ─────────────────────────────────────── */}
-            <div className="vc-row flex gap-4" style={{ minHeight: 320 }}>
+            {/* ── ROW 3: Auxiliaries (Desktop) ─────────────────────────────────────── */}
+            <div className="vc-row hidden md:flex gap-4" style={{ minHeight: 320 }}>
                 {/* Left: 2-col category selector */}
                 <div className="overflow-y-auto vc-scrollbar" style={{ width: 340, flexShrink: 0 }}>
                     <div className="flex items-center justify-between mb-2">
@@ -525,6 +631,123 @@ export default function VerbConjugation() {
                     </div>
                 </div>
             </div>
+
+            {/* Mobile: Auxiliaries Section */}
+            {mobileConjTab === 'AUX' && (
+                <div className="vc-row md:hidden flex flex-col gap-4" style={{ minHeight: 320 }}>
+                    {/* Left: 2-col category selector */}
+                    <div className="overflow-y-auto vc-scrollbar" style={{ maxHeight: 160 }}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
+                                助動詞・補助動詞
+                            </span>
+                            <button
+                                onClick={toggleAllAux}
+                                className="text-xs px-2 py-0.5 rounded-full border transition-all hover:brightness-105"
+                                style={{ borderColor: colors.border, color: colors.textLight }}
+                            >
+                                {AUX_CATEGORIES.every(cat =>
+                                    cat.forms.every(f => auxSelected.forms[`${cat.key}__${f}`])
+                                ) ? '全解除' : '全選'}
+                            </button>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            {AUX_CATEGORIES.map(cat => {
+                                const allOn  = cat.forms.every(f => auxSelected.forms[`${cat.key}__${f}`]);
+                                const anyOn  = cat.forms.some(f => auxSelected.forms[`${cat.key}__${f}`]);
+                                const partial = anyOn && !allOn;
+                                const collapsed = collapsedCats[cat.key];
+                                return (
+                                    <div key={cat.key}>
+                                        <div className="flex items-center gap-1 px-1 py-1 rounded-lg hover:bg-stone-100">
+                                            <button onClick={() => toggleCollapse(cat.key)}
+                                                    className="flex items-center" style={{ color: colors.textLight }}>
+                                                {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+                                            </button>
+                                            <IndeterminateCheckbox
+                                                checked={allOn}
+                                                indeterminate={partial}
+                                                onChange={() => toggleAuxCat(cat.key)}
+                                            />
+                                            <span className="text-xs font-bold ml-1 cursor-pointer"
+                                                  style={{ color: colors.text }}
+                                                  onClick={() => toggleCollapse(cat.key)}>
+                                                {cat.label}
+                                            </span>
+                                        </div>
+                                        {!collapsed && (
+                                            <div className="grid grid-cols-2 gap-x-2 ml-6 mb-1">
+                                                {cat.forms.map(form => (
+                                                    <label key={form}
+                                                           className="flex items-center gap-1.5 px-1 py-0.5 rounded cursor-pointer hover:bg-stone-100">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!auxSelected.forms[`${cat.key}__${form}`]}
+                                                            onChange={() => toggleAuxForm(cat.key, form)}
+                                                            className="accent-[#9c8c7d] w-3 h-3"
+                                                        />
+                                                        <span className="text-xs" style={{ color: colors.textLight }}>{form}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Right: aux table */}
+                    <div className="flex-1 flex flex-col min-h-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
+                                助動詞活用表
+                            </span>
+                            <button
+                                onClick={() => playAllAux ? stopAll() : runQueue(auxQueue(), 'aux')}
+                                disabled={!conjugations}
+                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-bold text-xs transition-all active:scale-95 hover:brightness-110 disabled:opacity-40"
+                                style={{ backgroundColor: playAllAux ? colors.accent : colors.primary }}
+                            >
+                                {playAllAux
+                                    ? <><Square size={10} fill="#fff" color="#fff" /> STOP</>
+                                    : <><Play   size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto vc-scrollbar">
+                            {!conjugations ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <span className="text-sm" style={{ color: colors.textLight }}>動詞を検索してください</span>
+                                </div>
+                            ) : (
+                                <table className="w-full border-collapse text-sm">
+                                    <tbody>
+                                    {AUX_CATEGORIES.flatMap(cat =>
+                                        cat.forms
+                                            .filter(form => auxSelected.forms[`${cat.key}__${form}`])
+                                            .map(form => {
+                                                const fkey = `${cat.key}__${form}`;
+                                                const full  = conjugations[`aux_${fkey}`] || '—';
+                                                const k     = `aux_${fkey}`;
+                                                return (
+                                                    <tr key={fkey} className="vc-tr">
+                                                        <td className="py-2 px-2 text-xs" style={{ color: colors.textLight }}>{cat.label}</td>
+                                                        <td className="py-2 px-2 text-xs" style={{ color: colors.textLight }}>{form}</td>
+                                                        <td className="py-2 px-2 font-bold text-xs" style={{ color: colors.text }}>{full}</td>
+                                                        <td className="py-2 px-2 text-right">
+                                                            <PlayBtn playing={playingKey === k} onPlay={() => playSingle(full, k)} small />
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                    )}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
