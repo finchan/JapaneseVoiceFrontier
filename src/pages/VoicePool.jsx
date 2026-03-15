@@ -232,7 +232,7 @@ export default function VoicePool() {
 
 
     return (
-        <div className="max-w-5xl mx-auto space-y-4 p-4">
+        <div className="max-w-5xl mx-auto space-y-4 p-1">
             <style>{`
                 .custom-scroll::-webkit-scrollbar { width: 4px; } 
                 .custom-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -359,7 +359,7 @@ export default function VoicePool() {
 
             {/* 下方控制栏与字幕区域 */}
             {selectedFile && (
-                <div className="bg-white rounded-3xl p-6 shadow-xl border border-stone-100">
+                <div className="bg-white rounded-xl p-6 shadow-xl border border-stone-100">
                     {/* Desktop: File info - hidden on mobile */}
                     <div className="hidden md:flex items-center justify-between mb-4 pb-4 border-b border-stone-100">
 
@@ -488,7 +488,7 @@ export default function VoicePool() {
                         className="mb-6 md:mb-6 rounded-xl md:rounded-2xl overflow-hidden bg-stone-50 p-2 md:p-4"
                     ></div>
                     
-                    <div ref={scrollContainerRef} onMouseUp={handleTextSelection} className="md:p-4 space-y-2 h-[280px] overflow-y-auto relative scroll-smooth pr-2 custom-scroll hide-scrollbar cursor-text">
+                    <div ref={scrollContainerRef} onMouseUp={handleTextSelection} className="md:p-4 space-y-2 h-[300px] overflow-y-auto relative scroll-smooth pr-2 custom-scroll hide-scrollbar cursor-text">
 
 
                         {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-stone-300"/></div> :

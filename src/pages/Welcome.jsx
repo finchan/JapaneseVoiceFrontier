@@ -18,7 +18,7 @@ const menuStructure = [
         id: 'VOICE/TEXT',
         submenus: [
             { id: 'VOICE POOL', icon: Database },
-            { id: 'VOICE UPLOAD', icon: Upload },
+            { id: 'VOICE ANALYSIS', icon: Upload },
             { id: 'VOICE MANAGEMENT', icon: Settings },
         ]
     },

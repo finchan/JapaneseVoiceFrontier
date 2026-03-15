@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, FileText, Languages, ChevronDown, ChevronLeft, UserCircle, LogOut, Settings, Database, Upload, BookOpen, FileType, List, Menu, X } from 'lucide-react';
 import Login from './pages/Login';
 import Welcome from './pages/Welcome';
-import VoiceUpload from './pages/VoiceUpload';
+import VoiceAnalysis from './pages/VoiceAnalysis';
 import TextSubmit from './pages/TextSubmit';
 import VerbConjugation from './pages/VerbConjugation';
 import VoiceManagement from './pages/VoiceManagement';
@@ -37,7 +37,7 @@ function App() {
             id: 'VOICE/TEXT',
             submenus: [
                 { id: 'VOICE POOL', icon: Database, page: 'VoicePool' },
-                { id: 'VOICE UPLOAD', icon: Upload, page: 'VoiceUpload' },
+                { id: 'VOICE ANALYSIS', icon: Upload, page: 'VoiceAnalysis' },
                 { id: 'VOICE MANAGEMENT', icon: Settings, page: 'VoiceManagement' },
             ]
         },
@@ -276,7 +276,7 @@ function App() {
                 <div className="max-w-5xl mx-auto">
                     {activeMenu === 'WELCOME' && <Welcome />}
                     {activeMenu === 'VOICE POOL' && <VoicePool />}
-                    {activeMenu === 'VOICE UPLOAD' && <VoiceUpload />}
+                    {activeMenu === 'VOICE ANALYSIS' && <VoiceAnalysis />}
                     {activeMenu === 'VOICE MANAGEMENT' && <VoiceManagement />}
                     {activeMenu === 'TEXT SUBMIT' && <TextSubmit />}
                     {activeMenu === 'VERB' && <VerbConjugation />}

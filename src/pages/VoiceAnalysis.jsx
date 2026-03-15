@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import {Play, Pause, Upload, Loader2, RotateCcw, Gauge} from 'lucide-react';
+import {Play, Pause, Upload, Loader2, RotateCcw, Gauge, ChevronUp, ChevronDown, SkipBack, SkipForward} from 'lucide-react';
 import WordLookup, {WordLookupPanel} from '../components/WordLookup';
 import API_CONFIG from '../config';
 
@@ -24,7 +24,7 @@ const colors = {
     cardBorder: '#4a4a4a'
 };
 
-export default function VoiceUpload() {
+export default function VoiceAnalysis() {
     const waveformRef = useRef(null);
     const wavesurfer = useRef(null);
     const scrollContainerRef = useRef(null);
@@ -188,16 +188,22 @@ export default function VoiceUpload() {
 
 
     const initWavesurfer = (url) => {
-        if (wavesurfer.current) return; // Guard against double init
+        if (wavesurfer.current) return;
+        const isMobile = window.innerWidth < 768;
         wavesurfer.current = WaveSurfer.create({
             container: waveformRef.current,
             waveColor: colors.waveColor,
             progressColor: colors.progressColor,
-            barWidth: 2, barGap: 1, height: 80,
+            barWidth: isMobile ? 1 : 2,
+            barGap: isMobile ? 5 : 1,
+            height: isMobile ? 40 : 80,
             normalize: true, cursorWidth: 0,
+            responsive: true,
         });
         wavesurfer.current.load(url);
         wavesurfer.current.on('audioprocess', (time) => setCurrentTime(time));
+        wavesurfer.current.on('seeking', (time) => setCurrentTime(time));
+        wavesurfer.current.on('interaction', (time) => setCurrentTime(time));
         wavesurfer.current.on('play', () => setIsPlaying(true));
         wavesurfer.current.on('pause', () => setIsPlaying(false));
     };
@@ -251,16 +257,17 @@ export default function VoiceUpload() {
                 <label htmlFor="audio-upload" className="cursor-pointer flex items-center gap-2">
                     {loading ? <Loader2 className="animate-spin" style={{color: colors.primary}}/> :
                         <Upload size={16} style={{color: colors.textLight}}/>}
-                    <span className="font-bold text-stone-900 text-large">UPLOAD MP3</span>
+                    <span className="font-bold text-stone-900 text-large">MP3 ANALYSIS</span>
                 </label>
             </div>
 
             {transcript && (
-                <div className="rounded-3xl shadow-lg bg-white">
-                    <div className="p-6 border-b"
-                         style={{backgroundColor: colors.primaryLight, borderColor: colors.border}}>
-                        <div ref={waveformRef} className="mb-4"/>
-                        <div className="flex items-center justify-center gap-4">
+                <div className="rounded-xl p-6 shadow-lg bg-white">
+                    <div className="md:p-6 border-b"
+                         style={{ borderColor: colors.border}}>
+                        
+                        {/* Desktop: Controls - hidden on mobile */}
+                        <div className="hidden md:flex items-center justify-center gap-4 mb-4">
                             <button onClick={() => wavesurfer.current?.playPause()}
                                     className="w-14 h-14 rounded-full flex items-center justify-center text-white shadow-md hover:scale-105 transition-transform"
                                     style={{backgroundColor: colors.primary}}>
@@ -288,10 +295,104 @@ export default function VoiceUpload() {
                                     className="p-2.5 rounded-full border border-stone-200 bg-white/60 text-stone-500 shadow-sm">
                                 <RotateCcw size={16}/></button>
                         </div>
+
+                        {/* Mobile: 5-button controls */}
+                        <div className="md:hidden mb-3">
+                            <div className="flex items-center justify-between gap-1">
+                                <button 
+                                    onClick={() => {
+                                        if (!wavesurfer.current) return;
+                                        const currentIndex = transcript.findIndex(line => currentTime >= line.start && currentTime <= line.end);
+                                        const currentLineStart = transcript[currentIndex]?.start || 0;
+                                        if (currentTime - currentLineStart > 1.5) {
+                                            wavesurfer.current.setTime(currentLineStart);
+                                        } else {
+                                            const prevIndex = Math.max(0, currentIndex - 1);
+                                            wavesurfer.current.setTime(transcript[prevIndex].start);
+                                        }
+                                        wavesurfer.current.play();
+                                    }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                                >
+                                    <SkipBack size={16} />
+                                </button>
+                                
+                                <button 
+                                    onClick={() => wavesurfer.current?.playPause()}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90"
+                                    style={{backgroundColor: colors.primary}}
+                                >
+                                    {isPlaying ? <Pause size={18}/> : <Play size={18} className="ml-0.5"/>}
+                                </button>
+                                
+                                <button 
+                                    onClick={() => {
+                                        if (!wavesurfer.current) return;
+                                        const nextIndex = transcript.findIndex(line => line.start > currentTime);
+                                        if (nextIndex !== -1) {
+                                            wavesurfer.current.setTime(transcript[nextIndex].start);
+                                            wavesurfer.current.play();
+                                        }
+                                    }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                                >
+                                    <SkipForward size={16} />
+                                </button>
+                                
+                                <div className="w-px h-8 bg-stone-300"></div>
+                                
+                                <button 
+                                    onClick={() => {
+                                        const currentIdx = [0.5, 0.75, 1.0, 1.25, 1.5].indexOf(playbackRate);
+                                        const newIdx = currentIdx > 0 ? currentIdx - 1 : 0;
+                                        setPlaybackRate([0.5, 0.75, 1.0, 1.25, 1.5][newIdx]);
+                                    }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                                >
+                                    <ChevronUp size={18} />
+                                </button>
+                                
+                                <div 
+                                    onClick={() => {
+                                        const currentIdx = [0.5, 0.75, 1.0, 1.25, 1.5].indexOf(playbackRate);
+                                        const newIdx = currentIdx < 4 ? currentIdx + 1 : 4;
+                                        setPlaybackRate([0.5, 0.75, 1.0, 1.25, 1.5][newIdx]);
+                                    }}
+                                    className="text-sm font-bold text-stone-600 cursor-pointer px-1"
+                                >
+                                    {playbackRate.toFixed(2)}
+                                </div>
+                                
+                                <button 
+                                    onClick={() => {
+                                        const currentIdx = [0.5, 0.75, 1.0, 1.25, 1.5].indexOf(playbackRate);
+                                        const newIdx = currentIdx < 4 ? currentIdx + 1 : 4;
+                                        setPlaybackRate([0.5, 0.75, 1.0, 1.25, 1.5][newIdx]);
+                                    }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                                >
+                                    <ChevronDown size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Wave */}
+                        <div 
+                            ref={waveformRef} 
+                            onClick={(e) => {
+                                if (!wavesurfer.current) return;
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const x = e.clientX - rect.left;
+                                const percent = x / rect.width;
+                                const duration = wavesurfer.current.getDuration();
+                                wavesurfer.current.setTime(percent * duration);
+                            }}
+                            className="mb-4 md:mb-4 rounded-xl md:rounded-2xl overflow-hidden bg-stone-50 p-2 md:p-4"
+                        />
                     </div>
 
                     <div ref={scrollContainerRef} onMouseUp={handleTextSelection}
-                         className="p-4 overflow-y-auto cursor-text leading-relaxed slim-scroll scroll-smooth"
+                         className="md:p-4 p-0 overflow-y-auto cursor-text h-[280px] leading-relaxed slim-scroll scroll-smooth"
                          style={{maxHeight: '500px'}}>
                         {transcript.map((line, idx) => {
                             const isLineActive = currentTime >= line.start && currentTime <= line.end;
