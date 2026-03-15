@@ -61,7 +61,7 @@ export default function TextSubmit() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center p-6 japanese-text min-h-[calc(100vh-160px)]">
+        <div className="p-4 md:p-6 japanese-text">
 
             {/* Scrollbar & textarea styles */}
             <style>{`
@@ -82,13 +82,13 @@ export default function TextSubmit() {
                 }
             `}</style>
 
-            <div className="w-[1024px] h-[700px] bg-white rounded-[32px] p-12 shadow-sm border flex flex-col"
-                 style={{ borderColor: colors.border }}>
+            <div className="w-full md:w-[800px] lg:w-[1024px] bg-white rounded-2xl md:rounded-[32px] p-6 md:p-12 shadow-sm border flex flex-col"
+                 style={{ borderColor: colors.border, minHeight: '500px' }}>
 
                 {/* Header */}
-                <div className="flex items-center gap-3 mb-8">
+                <div className="flex items-center gap-3 mb-4 md:mb-8">
                     <FileText size={18} style={{ color: colors.primary }} />
-                    <h2 className="text-2xl font-bold" style={{ color: colors.text }}>TEXT TO VOICE</h2>
+                    <h2 className="text-xl md:text-2xl font-bold" style={{ color: colors.text }}>TEXT TO VOICE</h2>
                 </div>
 
                 {/* Hint */}
@@ -97,11 +97,11 @@ export default function TextSubmit() {
                 </p>
 
                 {/* Textarea */}
-                <div className="relative mb-8 flex-grow">
+                <div className="relative mb-4 md:mb-8 flex-grow">
                     <textarea
                         value={inputText}
                         onChange={(e) => { setInputText(e.target.value); setStatus(null); }}
-                        className="w-full h-full p-6 rounded-2xl bg-stone-50 border transition-all custom-scrollbar custom-textarea resize-none text-lg"
+                        className="w-full h-60 md:h-80 lg:h-[500px] min-h-[250px] p-4 md:p-6 rounded-xl md:rounded-2xl bg-stone-50 border transition-all custom-scrollbar custom-textarea resize-none text-base md:text-lg"
                         style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
                         placeholder={"filename-without-extension\nこんにちは、一緒に勉強しましょう..."}
                     />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, FileText, Languages, ChevronDown, UserCircle, LogOut, Settings, Database, Upload, BookOpen, FileType, List } from 'lucide-react';
+import { Volume2, FileText, Languages, ChevronDown, ChevronLeft, UserCircle, LogOut, Settings, Database, Upload, BookOpen, FileType, List, Menu, X } from 'lucide-react';
 import Login from './pages/Login';
 import Welcome from './pages/Welcome';
 import VoiceUpload from './pages/VoiceUpload';
@@ -27,6 +27,8 @@ function App() {
     const [activeMenu, setActiveMenu] = useState('WELCOME');
     const [activeFirstLevel, setActiveFirstLevel] = useState('VOICE/TEXT');
     const [openSubMenu, setOpenSubMenu] = useState(null);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [mobileSubMenu, setMobileSubMenu] = useState(null);
 
     const menuRef = useRef(null);
 
@@ -82,6 +84,19 @@ function App() {
     const handleLogout = () => {
         localStorage.removeItem('user_role');
         setIsAuthenticated(false);
+        setMobileMenuOpen(false);
+    };
+
+    const handleMenuClick = (menuId) => {
+        setActiveFirstLevel(menuId);
+        setMobileSubMenu(mobileSubMenu === menuId ? null : menuId);
+    };
+
+    const handleSubMenuClick = (submenu) => {
+        setActiveMenu(submenu.id);
+        setActiveFirstLevel(submenu.parentId || menuStructure.find(m => m.submenus.some(s => s.id === submenu.id))?.id);
+        setMobileMenuOpen(false);
+        setMobileSubMenu(null);
     };
 
     if (!isAuthenticated) {
@@ -92,7 +107,8 @@ function App() {
         <div className="min-h-screen font-sans" style={{ backgroundColor: colors.background }}>
             {/* Navigation Menu */}
             <nav className="shadow-sm sticky top-0 z-[1000]" style={{ backgroundColor: colors.white, borderBottom: `1px solid ${colors.border}` }}>
-                <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-16">
+                {/* Desktop Menu */}
+                <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-16 hidden md:flex">
                     {/* Left role indicator */}
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 border border-stone-200">
                         <UserCircle size={14} style={{ color: colors.primary }} />
@@ -162,7 +178,98 @@ function App() {
                         <span className="text-xs font-bold">EXIT</span>
                     </button>
                 </div>
+
+                {/* Mobile Header */}
+                <div className="flex md:hidden items-center justify-between px-4 h-14">
+                    <button
+                        onClick={() => setMobileMenuOpen(true)}
+                        className="p-2 rounded-lg hover:bg-stone-100"
+                    >
+                        <Menu size={24} style={{ color: colors.text }} />
+                    </button>
+
+                    <span className="font-bold text-sm" style={{ color: colors.text }}>Japanese Voice</span>
+
+                    <button
+                        onClick={handleLogout}
+                        className="p-2 rounded-lg hover:bg-red-50"
+                    >
+                        <LogOut size={20} style={{ color: colors.error || '#b05a5a' }} />
+                    </button>
+                </div>
             </nav>
+
+            {/* Mobile Menu Overlay */}
+            {mobileMenuOpen && (
+                <div className="fixed inset-0 z-[2000] md:hidden">
+                    {/* Backdrop */}
+                    <div 
+                        className="absolute inset-0 bg-black/50"
+                        onClick={() => setMobileMenuOpen(false)}
+                    />
+                    
+                    {/* Drawer */}
+                    <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-2xl animate-in slide-in-from-left duration-300">
+                        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: colors.border }}>
+                            <div className="flex items-center gap-2">
+                                <UserCircle size={20} style={{ color: colors.primary }} />
+                                <span className="font-bold text-sm uppercase" style={{ color: colors.text }}>{role}</span>
+                            </div>
+                            <button
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="p-1 rounded-lg hover:bg-stone-100"
+                            >
+                                <X size={20} style={{ color: colors.text }} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+                            {menuStructure.map((menu) => (
+                                <div key={menu.id}>
+                                    <button
+                                        onClick={() => handleMenuClick(menu.id)}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
+                                            activeFirstLevel === menu.id ? 'shadow-md' : 'hover:bg-stone-50'
+                                        }`}
+                                        style={{
+                                            backgroundColor: activeFirstLevel === menu.id ? colors.highlight : 'transparent',
+                                            color: activeFirstLevel === menu.id ? '#ffffff' : colors.text
+                                        }}
+                                    >
+                                        <span>{menu.id}</span>
+                                        <ChevronDown size={16} className={`transition-transform duration-300 ${mobileSubMenu === menu.id ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {/* Mobile Submenu */}
+                                    {mobileSubMenu === menu.id && (
+                                        <div className="mt-2 ml-4 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                            {menu.submenus.map((submenu) => {
+                                                const Icon = submenu.icon;
+                                                const isActive = activeMenu === submenu.id;
+                                                return (
+                                                    <button
+                                                        key={submenu.id}
+                                                        onClick={() => handleSubMenuClick({ ...submenu, parentId: menu.id })}
+                                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-colors ${
+                                                            isActive 
+                                                                ? 'bg-stone-100' 
+                                                                : 'hover:bg-stone-50'
+                                                        }`}
+                                                        style={{ color: isActive ? colors.primary : colors.textLight }}
+                                                    >
+                                                        <Icon size={16} />
+                                                        {submenu.id}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Content Area */}
             <div className="p-4 md:p-5">

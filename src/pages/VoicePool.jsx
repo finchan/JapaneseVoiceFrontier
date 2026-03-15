@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useRef} from "react";
 import WaveSurfer from "wavesurfer.js";
-import {BookOpen, Layers, FileAudio, Play, Pause, Loader2, RotateCcw, Gauge} from "lucide-react";
+import {BookOpen, Layers, FileAudio, Play, Pause, Loader2, ChevronUp, ChevronDown, SkipBack, SkipForward, Gauge, RotateCcw} from "lucide-react";
 import WordLookup, {WordLookupPanel} from '../components/WordLookup';
 import API_CONFIG from '../config';
 
@@ -34,6 +34,8 @@ export default function VoicePool() {
     const [currentTime, setCurrentTime] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+    const [mobileTab, setMobileTab] = useState('BOOKS');
+    const [mobileMenuCollapsed, setMobileMenuCollapsed] = useState(false);
 
     const wavesurferRef = useRef(null);
     const waveContainerRef = useRef(null);
@@ -166,13 +168,14 @@ export default function VoicePool() {
 
     const initWaveSurfer = (url) => {
         if (wavesurferRef.current) wavesurferRef.current.destroy();
+        const isMobile = window.innerWidth < 768;
         const ws = WaveSurfer.create({
             container: waveContainerRef.current,
             waveColor: "#c9c0b8",
             progressColor: "#9c8c7d",
-            barWidth: 2,
-            barGap: 1,
-            height: 80,
+            barWidth: isMobile ? 1 : 2,
+            barGap: isMobile ? 5 : 1,
+            height: isMobile ? 40 : 80,
             responsive: true,
             normalize: true,
             cursorWidth: 0,
@@ -183,6 +186,7 @@ export default function VoicePool() {
         ws.on("play", () => setIsPlaying(true));
         ws.on("pause", () => setIsPlaying(false));
         ws.on("audioprocess", (time) => setCurrentTime(time));
+        ws.on("seeking", (time) => setCurrentTime(time));
         ws.on("interaction", (time) => setCurrentTime(time));
         ws.load(url);
     };
@@ -243,8 +247,8 @@ export default function VoicePool() {
             `}</style>
 
 
-            {/* 三栏联动菜单 - 高度调整为 165px (约减少20%)，圆角改为 rounded-xl */}
-            <div className="grid grid-cols-3 h-[165px] rounded-xl border overflow-hidden bg-white shadow-sm" style={{ borderColor: colors.border }}>
+            {/* Desktop: 3-column grid - hidden on mobile */}
+            <div className="hidden md:grid grid-cols-3 h-[165px] rounded-xl border overflow-hidden bg-white shadow-sm" style={{ borderColor: colors.border }}>
 
                 <div className="border-r custom-scroll overflow-y-auto" style={{ backgroundColor: colors.bgBook }}>
                     <div className="p-3 sticky top-0 bg-inherit flex items-center gap-2 font-bold text-[13px] text-stone-700 border-b">
@@ -276,11 +280,88 @@ export default function VoicePool() {
                 </div>
             </div>
 
+            {/* Mobile: Tabbed menu */}
+            <div className="md:hidden flex flex-col rounded-xl border overflow-hidden bg-white shadow-sm" style={{ borderColor: colors.border }}>
+                
+                {/* Compact bar - shown when file is selected and menu is collapsed */}
+                {selectedFile && mobileMenuCollapsed ? (
+                    <div 
+                        onClick={() => setMobileMenuCollapsed(false)}
+                        className="bg-stone-100 px-4 py-3 flex items-center gap-2 cursor-pointer"
+                    >
+                        <FileAudio size={16} className="text-stone-500" />
+                        <span className="flex-1 text-sm font-bold truncate" style={{ color: colors.text }}>
+                            {selectedFile}
+                        </span>
+                        <ChevronUp size={16} className="text-stone-400" />
+                    </div>
+                ) : (
+                    <>
+                        {/* Tab buttons */}
+                        <div className="flex border-b" style={{ backgroundColor: colors.bgBook }}>
+                            <button 
+                                onClick={() => setMobileTab('BOOKS')}
+                                className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'BOOKS' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                            >
+                                <BookOpen size={12} /> BOOKS
+                            </button>
+                            <button 
+                                onClick={() => setMobileTab('COURSES')}
+                                className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'COURSES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                            >
+                                <Layers size={12} /> COURSES
+                            </button>
+                            <button 
+                                onClick={() => setMobileTab('FILES')}
+                                className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'FILES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                            >
+                                <FileAudio size={12} /> FILES
+                            </button>
+                        </div>
+
+                        {/* Tab content */}
+                        <div className="h-36 custom-scroll overflow-y-auto">
+                            {mobileTab === 'BOOKS' && books.map(b => (
+                                <div 
+                                    key={b} 
+                                    onClick={() => handleBookClick(b)} 
+                                    className={`px-4 py-3 text-sm font-normal cursor-pointer border-b ${selectedBook === b ? "bg-stone-100" : "hover:bg-stone-50"}`}
+                                >
+                                    {b}
+                                </div>
+                            ))}
+                            {mobileTab === 'COURSES' && courses.map(c => (
+                                <div 
+                                    key={c} 
+                                    onClick={() => handleCourseClick(c)} 
+                                    className={`px-4 py-3 text-sm font-normal cursor-pointer border-b ${selectedCourse === c ? "bg-stone-100" : "hover:bg-stone-50"}`}
+                                >
+                                    {c}
+                                </div>
+                            ))}
+                            {mobileTab === 'FILES' && files.map(f => (
+                                <div 
+                                    key={f.id} 
+                                    onClick={() => {
+                                        handleFileClick(f);
+                                        setMobileMenuCollapsed(true);
+                                    }} 
+                                    className={`px-4 py-3 cursor-pointer border-b ${selectedFile === f.name ? "bg-stone-100 text-[#7d8d9c]" : "hover:bg-stone-50 text-stone-600"}`}
+                                >
+                                    <div className="text-sm font-normal truncate">{f.name}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+
 
             {/* 下方控制栏与字幕区域 */}
             {selectedFile && (
                 <div className="bg-white rounded-3xl p-6 shadow-xl border border-stone-100">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100">
+                    {/* Desktop: File info - hidden on mobile */}
+                    <div className="hidden md:flex items-center justify-between mb-4 pb-4 border-b border-stone-100">
 
                         <div className="flex-1 min-w-0 text-left">
                             <h2 className="text-medium font-black text-stone-800 tracking-tight truncate">{selectedFile}</h2>
@@ -305,8 +386,109 @@ export default function VoicePool() {
                             </div>
                         </div>
                     </div>
-                    <div ref={waveContainerRef} className="mb-6 rounded-2xl overflow-hidden bg-stone-50 p-4"/>
-                    <div ref={scrollContainerRef} onMouseUp={handleTextSelection} className="p-4 space-y-2 h-[280px] overflow-y-auto relative scroll-smooth pr-2 custom-scroll hide-scrollbar cursor-text">
+
+                    {/* Mobile: 7-button controls in one row */}
+                    <div className="md:hidden mb-3">
+                        <div className="flex items-center justify-between gap-1">
+                            {/* ← Left - Circle */}
+                            <button 
+                                onClick={() => {
+                                    if (!wavesurferRef.current) return;
+                                    const currentIndex = segments.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
+                                    const currentLineStart = segments[currentIndex]?.start || 0;
+                                    if (currentTime - currentLineStart > 1.5) {
+                                        wavesurferRef.current.setTime(currentLineStart);
+                                    } else {
+                                        const prevIndex = Math.max(0, currentIndex - 1);
+                                        wavesurferRef.current.setTime(segments[prevIndex].start);
+                                    }
+                                    wavesurferRef.current.play();
+                                }}
+                                className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                            >
+                                <SkipBack size={16} />
+                            </button>
+                            
+                            {/* ▶ Play - Circle */}
+                            <button 
+                                onClick={() => wavesurferRef.current?.playPause()}
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90"
+                                style={{backgroundColor: colors.primary}}
+                            >
+                                {isPlaying ? <Pause size={18}/> : <Play size={18} className="ml-0.5"/>}
+                            </button>
+                            
+                            {/* → Right - Circle */}
+                            <button 
+                                onClick={() => {
+                                    if (!wavesurferRef.current) return;
+                                    const nextIndex = segments.findIndex(seg => seg.start > currentTime);
+                                    if (nextIndex !== -1) {
+                                        wavesurferRef.current.setTime(segments[nextIndex].start);
+                                        wavesurferRef.current.play();
+                                    }
+                                }}
+                                className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                            >
+                                <SkipForward size={16} />
+                            </button>
+                            
+                            {/* Separator */}
+                            <div className="w-px h-8 bg-stone-300"></div>
+                            
+                            {/* ↑ Up - Slower - Circle */}
+                            <button 
+                                onClick={() => {
+                                    const currentIdx = SPEEDS.indexOf(playbackSpeed);
+                                    const newIdx = currentIdx > 0 ? currentIdx - 1 : 0;
+                                    handleSpeedChange(SPEEDS[newIdx]);
+                                }}
+                                className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                            >
+                                <ChevronUp size={18} />
+                            </button>
+                            
+                            {/* Rate as text */}
+                            <div 
+                                onClick={() => {
+                                    const currentIdx = SPEEDS.indexOf(playbackSpeed);
+                                    const newIdx = currentIdx < SPEEDS.length - 1 ? currentIdx + 1 : SPEEDS.length - 1;
+                                    handleSpeedChange(SPEEDS[newIdx]);
+                                }}
+                                className="text-sm font-bold text-stone-600 cursor-pointer px-1"
+                            >
+                                {playbackSpeed.toFixed(2)}
+                            </div>
+                            
+                            {/* ↓ Down - Faster - Circle */}
+                            <button 
+                                onClick={() => {
+                                    const currentIdx = SPEEDS.indexOf(playbackSpeed);
+                                    const newIdx = currentIdx < SPEEDS.length - 1 ? currentIdx + 1 : SPEEDS.length - 1;
+                                    handleSpeedChange(SPEEDS[newIdx]);
+                                }}
+                                className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
+                            >
+                                <ChevronDown size={18} />
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* Wave */}
+                    <div 
+                        ref={waveContainerRef} 
+                        onClick={(e) => {
+                            if (!wavesurferRef.current) return;
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const percent = x / rect.width;
+                            const duration = wavesurferRef.current.getDuration();
+                            wavesurferRef.current.setTime(percent * duration);
+                        }}
+                        className="mb-6 md:mb-6 rounded-xl md:rounded-2xl overflow-hidden bg-stone-50 p-2 md:p-4"
+                    ></div>
+                    
+                    <div ref={scrollContainerRef} onMouseUp={handleTextSelection} className="md:p-4 space-y-2 h-[280px] overflow-y-auto relative scroll-smooth pr-2 custom-scroll hide-scrollbar cursor-text">
 
 
                         {loading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-stone-300"/></div> :

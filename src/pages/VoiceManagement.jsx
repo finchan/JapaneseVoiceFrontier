@@ -99,7 +99,7 @@ export default function VoiceManagement() {
 
             <h1 className="text-2xl text-center tracking-[0.2em] uppercase mb-8 font-black"
                 style={{color: colors.text}}>
-                MP3 FILES MANAGEMENT
+                VOICE MANAGEMENT
             </h1>
 
             {/* 上部：表单区域 */}
