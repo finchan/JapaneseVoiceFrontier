@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Languages, Search, Play, Square } from 'lucide-react';
+import { Languages, Search, Play, Square, ChevronDown, ChevronRight } from 'lucide-react';
 import API_CONFIG from '../config';
 
 const colors = {
@@ -47,7 +47,7 @@ function PlayBtn({ playing, onPlay, small = false }) {
         >
             {playing
                 ? <Square size={small ? 10 : 12} color="#fff" fill="#fff" />
-                : <Play   size={small ? 10 : 12} color="#fff" fill="#fff" />}
+                : <Play size={small ? 10 : 12} color="#fff" fill="#fff" />}
         </button>
     );
 }
@@ -59,6 +59,7 @@ export default function AdjectiveNa() {
     const [searchStatus, setSearchStatus] = useState(null);
 
     const [basicSelected, setBasicSelected] = useState(initBasicSelected);
+    const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
     const [playingKey, setPlayingKey] = useState(null);
     const [playAllBasic, setPlayAllBasic] = useState(false);
@@ -188,7 +189,7 @@ export default function AdjectiveNa() {
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                        placeholder="な形容词を入力... 例: 静か / しずか"
+                        placeholder="な形容词... 例: 静か / しずか"
                         className="flex-1 md:w-64 w-32 px-4 py-2 rounded-xl border text-base md:text-sm outline-none transition-all flex-shrink-0"
                         style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
                     />
@@ -205,8 +206,7 @@ export default function AdjectiveNa() {
 
                 {/* Search results - Desktop inline, Mobile below */}
                 {adjNaInfo && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border w-full md:w-auto md:ml-auto"
-                         style={{ borderColor: colors.border, backgroundColor: colors.highlight }}>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl w-full md:w-auto md:ml-auto">
                         <span className="font-bold text-xs" style={{ color: colors.text }}>{adjNaInfo.adj_na}</span>
                         <span className="text-xs" style={{ color: colors.textLight }}>【{adjNaInfo.reading}】</span>
                         {adjNaInfo.meaning && (
@@ -222,86 +222,103 @@ export default function AdjectiveNa() {
                 )}
             </div>
 
-            {/* Mobile: Conjugation Section */}
-            <div className="vc-row md:hidden flex flex-col gap-4" style={{ minHeight: 400 }}>
-                    {/* Selector */}
-                    <div className="overflow-y-auto vc-scrollbar" style={{ maxHeight: 160 }}>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
-                                基本活用形
+            {/* Mobile: Selection Accordion (Directly placed, no outer panel) */}
+            <div className="md:hidden">
+                <div className="flex flex-col bg-stone-50/50 rounded-xl border overflow-hidden mb-1" style={{ borderColor: colors.border }}>
+                    <div
+                        onClick={() => setMobilePanelOpen(!mobilePanelOpen)}
+                        className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-stone-100/50 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.text }}>
+                                基本活用形 カテゴリ
                             </span>
+                            {BASIC_FORMS.some(f => basicSelected[f.key]) && (
+                                <span className="w-2 h-2 rounded-full bg-[#9c8c7d]" />
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
                             <button
-                                onClick={toggleAllBasic}
-                                className="text-xs px-2 py-0.5 rounded-full border transition-all hover:brightness-105"
+                                onClick={(e) => { e.stopPropagation(); toggleAllBasic(); }}
+                                className="text-[10px] px-2 py-0.5 rounded-full border bg-white transition-all hover:brightness-105"
                                 style={{ borderColor: colors.border, color: colors.textLight }}
                             >
                                 {allBasicOn ? '全解除' : '全選'}
                             </button>
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                            {BASIC_FORMS.map((f) => {
-                                return (
-                                    <div key={f.key}>
-                                        <div className="flex items-center gap-1 px-1 py-1 rounded-lg hover:bg-stone-100">
-                                            <input type="checkbox"
-                                                   checked={!!basicSelected[f.key]}
-                                                   onChange={() => toggleBasic(f.key)}
-                                                   className="accent-[#9c8c7d] w-3 h-3" />
-                                            <span className="text-xs ml-1 cursor-pointer"
-                                                  style={{ color: colors.text }}>
-                                                {f.label.length > 15 ? f.label.substring(0, 15) + '...' : f.label}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {mobilePanelOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         </div>
                     </div>
 
-                    {/* Table */}
-                    <div className="flex-1 flex flex-col min-h-0">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
-                                活用表
-                            </span>
-                            <button
-                                onClick={() => playAllBasic ? stopAll() : runQueue(basicQueue())}
-                                disabled={!conjugations}
-                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-bold text-xs transition-all active:scale-95 hover:brightness-110 disabled:opacity-40"
-                                style={{ backgroundColor: playAllBasic ? colors.accent : colors.primary }}
-                            >
-                                {playAllBasic
-                                    ? <><Square size={10} fill="#fff" color="#fff" /> STOP</>
-                                    : <><Play   size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
-                            </button>
+                    {mobilePanelOpen && (
+                        <div className="p-3 border-t grid grid-cols-1 gap-y-1" style={{ borderColor: colors.border }}>
+                            {BASIC_FORMS.map(f => (
+                                <label key={f.key}
+                                    className="flex items-center gap-2 px-1 py-1.5 rounded cursor-pointer hover:bg-white/50">
+                                    <input type="checkbox"
+                                        checked={!!basicSelected[f.key]}
+                                        onChange={() => toggleBasic(f.key)}
+                                        className="accent-[#9c8c7d] w-3 h-3" />
+                                    <span className="text-xs" style={{ color: colors.text }}>{f.label}</span>
+                                </label>
+                            ))}
                         </div>
-                        <div className="flex-1 overflow-y-auto vc-scrollbar">
-                            {!conjugations ? (
-                                <div className="h-full flex items-center justify-center">
-                                    <span className="text-sm" style={{ color: colors.textLight }}>な形容词を検索してください</span>
-                                </div>
-                            ) : (
-                                <table className="w-full border-collapse text-sm">
-                                    <tbody>
-                                    {BASIC_FORMS.filter(f => basicSelected[f.key]).map(f => {
-                                        const form = conjugations[f.key] || '—';
-                                        const k = `basic_${f.key}`;
-                                        return (
-                                            <tr key={f.key} className="vc-tr">
-                                                <td className="py-2 px-2 text-xs" style={{ color: colors.textLight }}>{f.label}</td>
-                                                <td className="py-2 px-2 font-bold text-xs" style={{ color: colors.text }}>{form}</td>
-                                                <td className="py-2 px-2 text-right">
-                                                    <PlayBtn playing={playingKey === k} onPlay={() => playSingle(form, k)} small />
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Mobile: Results Panel */}
+            <div className="vc-row md:hidden flex-1 flex flex-col gap-4 min-h-[280px]">
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textLight }}>
+                            活用表
+                        </span>
+                        <button
+                            onClick={() => playAllBasic ? stopAll() : runQueue(basicQueue())}
+                            disabled={!conjugations}
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-bold text-xs transition-all active:scale-95 hover:brightness-110 disabled:opacity-40"
+                            style={{ backgroundColor: playAllBasic ? colors.accent : colors.primary }}
+                        >
+                            {playAllBasic
+                                ? <><Square size={10} fill="#fff" color="#fff" /> STOP</>
+                                : <><Play size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto vc-scrollbar">
+                        {!conjugations ? (
+                            <div className="h-full flex items-center center">
+                                <span className="text-sm" style={{ color: colors.textLight }}>な形容词を検索してください</span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-0.5">
+                                {BASIC_FORMS.filter(f => basicSelected[f.key]).map(f => {
+                                    const form = conjugations[f.key] || '—';
+                                    const k = `basic_${f.key}`;
+                                    const parts = form.split(' / ');
+                                    return (
+                                        <div key={f.key} className="vc-tr flex flex-wrap items-center py-2.5 border-b border-stone-50 last:border-0" style={{ minHeight: '44px' }}>
+                                            <div className="w-[30%] text-[10px] leading-tight pr-2" style={{ color: colors.textLight }}>{f.label}</div>
+                                            <div className="w-[60%] font-bold text-xs break-words pr-2 flex flex-col" style={{ color: colors.text }}>
+                                                {parts.length > 1 ? (
+                                                    <>
+                                                        <span>{parts[0]} /</span>
+                                                        <span>{parts[1]}</span>
+                                                    </>
+                                                ) : (
+                                                    form
+                                                )}
+                                            </div>
+                                            <div className="w-[10%] flex justify-end">
+                                                <PlayBtn playing={playingKey === k} onPlay={() => playSingle(form, k)} small />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
+            </div>
 
             {/* ROW 2: Conjugation Table (Desktop) */}
             <div className="vc-row hidden md:flex gap-4" style={{ minHeight: 400 }}>
@@ -321,11 +338,11 @@ export default function AdjectiveNa() {
                     </div>
                     {BASIC_FORMS.map(f => (
                         <label key={f.key}
-                               className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:bg-stone-100">
+                            className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:bg-stone-100">
                             <input type="checkbox"
-                                   checked={!!basicSelected[f.key]}
-                                   onChange={() => toggleBasic(f.key)}
-                                   className="accent-[#9c8c7d] w-3 h-3" />
+                                checked={!!basicSelected[f.key]}
+                                onChange={() => toggleBasic(f.key)}
+                                className="accent-[#9c8c7d] w-3 h-3" />
                             <span className="text-xs" style={{ color: colors.text }}>{f.label}</span>
                         </label>
                     ))}
@@ -347,7 +364,7 @@ export default function AdjectiveNa() {
                         >
                             {playAllBasic
                                 ? <><Square size={10} fill="#fff" color="#fff" /> STOP</>
-                                : <><Play   size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
+                                : <><Play size={10} fill="#fff" color="#fff" /> PLAY ALL</>}
                         </button>
                     </div>
                     <div className="flex-1 overflow-y-auto vc-scrollbar">
@@ -358,19 +375,19 @@ export default function AdjectiveNa() {
                         ) : (
                             <table className="w-full border-collapse text-sm">
                                 <tbody>
-                                {BASIC_FORMS.filter(f => basicSelected[f.key]).map(f => {
-                                    const form = conjugations[f.key] || '—';
-                                    const k = `basic_${f.key}`;
-                                    return (
-                                        <tr key={f.key} className="vc-tr">
-                                            <td className="py-2 px-3 text-xs whitespace-nowrap" style={{ width: 280, color: colors.textLight }}>{f.label}</td>
-                                            <td className="py-2 px-3 font-bold text-xs text-left" style={{ color: colors.text }}>{form}</td>
-                                            <td className="py-2 px-3 text-right" style={{ width: 52 }}>
-                                                <PlayBtn playing={playingKey === k} onPlay={() => playSingle(form, k)} small />
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                    {BASIC_FORMS.filter(f => basicSelected[f.key]).map(f => {
+                                        const form = conjugations[f.key] || '—';
+                                        const k = `basic_${f.key}`;
+                                        return (
+                                            <tr key={f.key} className="vc-tr">
+                                                <td className="py-2 px-3 text-xs whitespace-nowrap" style={{ width: 280, color: colors.textLight }}>{f.label}</td>
+                                                <td className="py-2 px-3 font-bold text-xs text-left" style={{ color: colors.text }}>{form}</td>
+                                                <td className="py-2 px-3 text-right" style={{ width: 52 }}>
+                                                    <PlayBtn playing={playingKey === k} onPlay={() => playSingle(form, k)} small />
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         )}
