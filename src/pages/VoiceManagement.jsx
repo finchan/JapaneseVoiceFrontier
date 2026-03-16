@@ -15,6 +15,7 @@ const colors = {
 };
 
 export default function VoiceManagement() {
+    const [activeTab, setActiveTab] = useState('archive');
     const [formData, setFormData] = useState({book: '', course: '', category: ''});
     const [mp3Files, setMp3Files] = useState([]);
     const [selectedFileId, setSelectedFileId] = useState(null);
@@ -87,6 +88,19 @@ export default function VoiceManagement() {
         }
     };
 
+    const [tabIndicatorStyle, setTabIndicatorStyle] = useState({ left: 0, width: 0 });
+
+    useEffect(() => {
+        const tabsContainer = document.getElementById('tabs-container');
+        const activeButton = tabsContainer?.querySelector(`[data-tab="${activeTab}"]`);
+        if (activeButton) {
+            setTabIndicatorStyle({
+                left: activeButton.offsetLeft,
+                width: activeButton.offsetWidth
+            });
+        }
+    }, [activeTab]);
+
     const customScrollbar = `
         .macos-scroll::-webkit-scrollbar { width: 5px; }
         .macos-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -97,12 +111,45 @@ export default function VoiceManagement() {
         <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
             <style>{customScrollbar}</style>
 
-            <h1 className="text-2xl text-center tracking-[0.2em] uppercase mb-8 font-black"
+            <h1 className="text-2xl text-center tracking-[0.2em] uppercase mb-6 font-black"
                 style={{color: colors.text}}>
                 VOICE MANAGEMENT
             </h1>
 
-            {/* 上部：表单区域 */}
+            {/* Tab 导航 */}
+            <div id="tabs-container" className="relative mb-6 border-b" style={{borderColor: colors.border}}>
+                <div className="flex">
+                    {[
+                        {key: 'archive', label: 'VOICE ARCHIVE'},
+                        {key: 'cleaning', label: 'VOICE CLEANING'},
+                        {key: 'updating', label: 'VOICE UPDATING'}
+                    ].map((tab) => (
+                        <button
+                            key={tab.key}
+                            data-tab={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            className="flex-1 py-3 px-4 text-[15px] font-black tracking-wider transition-colors"
+                            style={{
+                                color: activeTab === tab.key ? colors.primary : colors.textLight
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+                <div
+                    className="absolute bottom-0 h-[3px] rounded-full transition-all duration-300 ease-out"
+                    style={{
+                        left: tabIndicatorStyle.left,
+                        width: tabIndicatorStyle.width,
+                        backgroundColor: colors.primary
+                    }}
+                />
+            </div>
+
+            {/* Tab 内容 */}
+            {activeTab === 'archive' && (
+            <>
             <div className="bg-white rounded-2xl shadow-sm border overflow-hidden" style={{borderColor: colors.border}}>
                 <div className="grid grid-cols-1">
                     {[
@@ -188,6 +235,19 @@ export default function VoiceManagement() {
                     SUBMIT
                 </button>
             </div>
+            </>)}
+
+            {activeTab === 'cleaning' && (
+                <div className="bg-white rounded-2xl shadow-sm border p-20 text-center" style={{borderColor: colors.border}}>
+                    <p className="text-2xl font-black tracking-widest" style={{color: colors.text}}>UNDER CONSTRUCTION</p>
+                </div>
+            )}
+
+            {activeTab === 'updating' && (
+                <div className="bg-white rounded-2xl shadow-sm border p-20 text-center" style={{borderColor: colors.border}}>
+                    <p className="text-2xl font-black tracking-widest" style={{color: colors.text}}>UNDER CONSTRUCTION</p>
+                </div>
+            )}
         </div>
     );
 }
