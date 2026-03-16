@@ -294,17 +294,17 @@ export default function VerbConjugation() {
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
                         placeholder="動詞を入力... 例: 食べる / はってん"
-                        className="flex-1 md:w-72 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                        className="flex-1 md:w-72 w-32 px-4 py-2 rounded-xl border text-base md:text-sm outline-none transition-all flex-shrink-0"
                         style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
                     />
                     <button
                         onClick={handleSearch}
                         disabled={searchStatus === 'loading'}
-                        className="flex items-center gap-2 px-5 py-2 rounded-full text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60"
+                        className="flex items-center gap-2 px-3 md:px-5 py-2 rounded-full text-white font-bold text-sm transition-all active:scale-95 hover:brightness-110 disabled:opacity-60 shrink-0"
                         style={{ backgroundColor: colors.primary }}
                     >
                         <Search size={14} />
-                        {searchStatus === 'loading' ? '検索中...' : 'SEARCH'}
+                        <span className="hidden md:inline">{searchStatus === 'loading' ? '...' : 'SEARCH'}</span>
                     </button>
                 </div>
 

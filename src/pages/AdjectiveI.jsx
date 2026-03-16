@@ -205,7 +205,7 @@ export default function AdjectiveI() {
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
                         placeholder="形容词を入力... 例: 高い / たかい"
-                        className="flex-1 md:w-64 px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                        className="flex-1 md:w-64 w-32 px-4 py-2 rounded-xl border text-base md:text-sm outline-none transition-all flex-shrink-0"
                         style={{ borderColor: colors.border, color: colors.text, backgroundColor: '#fdfdfc' }}
                     />
                     <button
@@ -215,7 +215,7 @@ export default function AdjectiveI() {
                         style={{ backgroundColor: colors.primary }}
                     >
                         <Search size={14} />
-                        <span className="hidden md:inline">{searchStatus === 'loading' ? '検索中...' : 'SEARCH'}</span>
+                        <span className="hidden md:inline">{searchStatus === 'loading' ? '...' : 'SEARCH'}</span>
                     </button>
                 </div>
 
