@@ -131,6 +131,7 @@ export default function VoicePool() {
         setSelectedFile(null);
         setCourses([]);
         setFiles([]);
+        setMobileTab('COURSES');
         fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.sourcesCourses) + `?book=${encodeURIComponent(book)}`)
             .then(res => res.json())
             .then(data => setCourses(data.courses || []));
@@ -140,6 +141,7 @@ export default function VoicePool() {
         setSelectedCourse(course);
         setSelectedFile(null);
         setFiles([]);
+        setMobileTab('FILES');
         fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.sourcesFiles) + `?book=${encodeURIComponent(selectedBook)}&course=${encodeURIComponent(course)}`)
             .then(res => res.json())
             .then(data => setFiles(data.files || []));
@@ -304,18 +306,27 @@ export default function VoicePool() {
                                 className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'BOOKS' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
                             >
                                 <BookOpen size={12} /> BOOKS
+                                {mobileTab === 'BOOKS' && !selectedBook && (
+                                    <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                                )}
                             </button>
                             <button 
                                 onClick={() => setMobileTab('COURSES')}
                                 className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'COURSES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
                             >
                                 <Layers size={12} /> COURSES
+                                {mobileTab === 'COURSES' && !selectedCourse && (
+                                    <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                                )}
                             </button>
                             <button 
                                 onClick={() => setMobileTab('FILES')}
                                 className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'FILES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
                             >
                                 <FileAudio size={12} /> FILES
+                                {mobileTab === 'FILES' && !selectedFile && (
+                                    <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                                )}
                             </button>
                         </div>
 
