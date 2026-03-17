@@ -331,7 +331,7 @@ export default function VoicePool() {
                         </div>
 
                         {/* Tab content */}
-                        <div className="h-36 custom-scroll overflow-y-auto">
+                        <div className="h-[450px] custom-scroll overflow-y-auto">
                             {mobileTab === 'BOOKS' && books.map(b => (
                                 <div 
                                     key={b} 
