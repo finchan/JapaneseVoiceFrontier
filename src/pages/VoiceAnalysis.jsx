@@ -38,6 +38,25 @@ export default function VoiceAnalysis() {
     const [playbackRate, setPlaybackRate] = useState(1);
     const [isRateOpen, setIsRateOpen] = useState(false);
 
+    const [language, setLanguage] = useState('ja');
+    const [cpuThreads, setCpuThreads] = useState(4);
+    const [initialPrompt, setInitialPrompt] = useState('こんにちは。今日は漢字とかなを使って日本語で話します。');
+    const [vadFilter, setVadFilter] = useState(false);
+    const [vadMs, setVadMs] = useState(3000);
+    const [gapVal, setGapVal] = useState(0.7);
+    const [noSpeechVal, setNoSpeechVal] = useState(0.6);
+    const [beamVal, setBeamVal] = useState(7);
+
+    const handleLanguageChange = (e) => {
+        const lang = e.target.value;
+        setLanguage(lang);
+        if (lang === 'ja') {
+            setInitialPrompt('こんにちは。今日は漢字とかなを使って日本語で話します。');
+        } else {
+            setInitialPrompt('');
+        }
+    };
+
     const {lookup, hideLookup, inflectionMode, toggleMode, fetchDictionaryData, handleTextSelection, getMoraList, parseAccentPattern} = WordLookup();
 
     const lastScrollIndex = useRef(-1);
@@ -166,6 +185,14 @@ export default function VoiceAnalysis() {
         formData.append("file", file);
         const currentRole = localStorage.getItem('user_role') || 'guest';
         formData.append("role", currentRole);
+        formData.append("language", language);
+        formData.append("initial_prompt", initialPrompt);
+        formData.append("vad_filter", vadFilter);
+        formData.append("vad_ms", vadMs);
+        formData.append("gap_val", gapVal);
+        formData.append("no_speech_val", noSpeechVal);
+        formData.append("beam_val", beamVal);
+        formData.append("cpu_threads", cpuThreads);
         try {
             const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.transcribe), {method: "POST", body: formData});
             if (!response.ok) {
@@ -248,6 +275,114 @@ export default function VoiceAnalysis() {
 
             <div className="flex items-center justify-center rounded-full p-2 text-sm">
                 服务器的内存只有2GB，离线运行faster-whisper-large-v3-turbo-ct2模型，没有GPU，双核CPU借助硬盘处理。
+            </div>
+
+            {/* Settings Panel */}
+            <div className="rounded-xl p-6 shadow-sm bg-white border mb-4 space-y-5" style={{borderColor: colors.border}}>
+                <div className="flex items-center text-sm font-bold pb-2 border-b" style={{color: colors.primary, borderColor: colors.border}}>
+                    Deep Tuning Profile
+                </div>
+                
+                {/* Row 1: Language & CPU */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <label className="font-bold whitespace-nowrap" style={{color: colors.text}}>语言语种:</label>
+                        <select 
+                            value={language} 
+                            onChange={handleLanguageChange} 
+                            className="bg-transparent border-none outline-none text-stone-700 w-full"
+                        >
+                            <option value="ja">Japense (default)</option>
+                            <option value="auto">Auto</option>
+                            <option value="en">English</option>
+                            <option value="ms">Malay</option>
+                            <option value="id">Indonesian</option>
+                            <option value="vi">Vietnamese</option>
+                            <option value="ru">Russian</option>
+                        </select>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <label className="font-bold whitespace-nowrap" style={{color: colors.text}}>CPU 核数 (Test):</label>
+                        <input 
+                            type="number" 
+                            value={cpuThreads} 
+                            onChange={(e) => setCpuThreads(e.target.value)} 
+                            className="bg-transparent border-none outline-none text-stone-700 w-full"
+                        />
+                    </div>
+                </div>
+
+                {/* Row 2: VAD & Gap */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <input 
+                            type="checkbox" 
+                            checked={vadFilter} 
+                            onChange={(e) => setVadFilter(e.target.checked)} 
+                            className="accent-[#9c8c7d]" 
+                            id="vad-filter-cb"
+                        />
+                        <label htmlFor="vad-filter-cb" className="font-bold cursor-pointer" style={{color: colors.text}}>无声音频(VAD)</label>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <label className="font-bold whitespace-nowrap flex-shrink-0" title="VAD静音切片阈值" style={{color: colors.text}}>静音(ms):</label>
+                        <input 
+                            type="number" 
+                            value={vadMs} 
+                            onChange={(e) => setVadMs(e.target.value)} 
+                            disabled={!vadFilter}
+                            className="bg-transparent border-none outline-none text-stone-700 w-full disabled:opacity-50"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <label className="font-bold whitespace-nowrap flex-shrink-0" style={{color: colors.text}}>断句间隙(Gap):</label>
+                        <input 
+                            type="number" 
+                            step="0.1" 
+                            value={gapVal} 
+                            onChange={(e) => setGapVal(e.target.value)} 
+                            className="bg-transparent border-none outline-none text-stone-700 w-full"
+                        />
+                    </div>
+                </div>
+
+                {/* Row 3: Prompts & Deep Params */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <div className="md:col-span-8 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <label className="font-bold whitespace-nowrap flex-shrink-0" style={{color: colors.text}}>词垫(Prompt):</label>
+                        <input 
+                            type="text" 
+                            value={initialPrompt} 
+                            onChange={(e) => setInitialPrompt(e.target.value)} 
+                            placeholder="留空即默认"
+                            className="bg-transparent border-none outline-none text-stone-700 w-full"
+                        />
+                    </div>
+                    
+                    <div className="md:col-span-2 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <label className="font-bold whitespace-nowrap flex-shrink-0" style={{color: colors.text}}>Beam:</label>
+                        <input 
+                            type="number" 
+                            value={beamVal} 
+                            onChange={(e) => setBeamVal(e.target.value)} 
+                            className="bg-transparent border-none outline-none text-stone-700 w-full"
+                        />
+                    </div>
+
+                    <div className="md:col-span-2 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                        <label className="font-bold whitespace-nowrap flex-shrink-0" title="No Speech Threshold" style={{color: colors.text}}>静默(NS):</label>
+                        <input 
+                            type="number" 
+                            step="0.1" 
+                            value={noSpeechVal} 
+                            onChange={(e) => setNoSpeechVal(e.target.value)} 
+                            className="bg-transparent border-none outline-none text-stone-700 w-full"
+                        />
+                    </div>
+                </div>
             </div>
 
             <div className="flex items-center justify-center border-2 border-dashed rounded-full p-2 gap-3"

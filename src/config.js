@@ -7,7 +7,7 @@ const PRODUCTION_IP = "http://118.25.106.35:8000"                    // Python c
 
 const API_CONFIG = {
 
-    baseURL: TESTING,
+    baseURL: PRODUCTION_DOMAIN,
 
     // API 端点
     endpoints: {
