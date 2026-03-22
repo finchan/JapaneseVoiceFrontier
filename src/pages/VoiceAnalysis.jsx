@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Upload, Info, Loader2, RotateCcw, Gauge, ChevronUp, ChevronDown, SkipBack, SkipForward } from 'lucide-react';
+import { Play, Pause, Upload, Info, Loader2, RotateCcw, Gauge, ChevronUp, ChevronDown, SkipBack, SkipForward, Repeat } from 'lucide-react';
 import WordLookup, { WordLookupPanel } from '../components/WordLookup';
 import API_CONFIG from '../config';
 
@@ -43,6 +43,10 @@ export default function VoiceAnalysis() {
     const [cacheAuto, setCacheAuto] = useState({ transcript: null, audioUrl: null, currentTime: 0 });
     const [cacheManual, setCacheManual] = useState({ transcript: null, audioUrl: null, currentTime: 0 });
     const [tabIndicatorStyle, setTabIndicatorStyle] = useState({ left: 0, width: 0 });
+    const [repeatMode, setRepeatMode] = useState(false);
+
+    const repeatModeRef = useRef(false);
+    const segmentsRef = useRef([]);
 
     useEffect(() => {
         const tabsContainer = document.getElementById('analysis-tabs-container');
@@ -114,6 +118,9 @@ export default function VoiceAnalysis() {
         if (wavesurfer.current) wavesurfer.current.setPlaybackRate(playbackRate);
     }, [playbackRate]);
 
+    useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
+    useEffect(() => { segmentsRef.current = transcript; }, [transcript]);
+
     useEffect(() => {
         if (transcript) {
             const activeIndex = transcript.findIndex(line => currentTime >= line.start && currentTime <= line.end);
@@ -179,6 +186,7 @@ export default function VoiceAnalysis() {
                     // 右键：跳转到下一句开头
                     const nextIndex = currentIndex + 1;
                     if (nextIndex < transcript.length) {
+                        setRepeatMode(false);
                         wavesurfer.current.setTime(transcript[nextIndex].start);
                         wavesurfer.current.play();
                     }
@@ -186,6 +194,7 @@ export default function VoiceAnalysis() {
 
                 case 'ArrowLeft':
                     // 左键：重听本句或跳转到上一句
+                    setRepeatMode(false);
                     const currentLineStart = transcript[currentIndex]?.start || 0;
                     if (currentTime - currentLineStart > 1.5) {
                         wavesurfer.current.setTime(currentLineStart);
@@ -295,7 +304,19 @@ export default function VoiceAnalysis() {
             responsive: true,
         });
         wavesurfer.current.load(url);
-        wavesurfer.current.on('audioprocess', (time) => setCurrentTime(time));
+        wavesurfer.current.on('audioprocess', (time) => {
+            setCurrentTime(time);
+
+            // Repeat mode logic
+            const mode = repeatModeRef.current;
+            const segs = segmentsRef.current;
+            if (mode && segs.length > 0) {
+                const currentSeg = segs.find(s => time >= s.start && time <= s.end);
+                if (currentSeg && time >= currentSeg.end - 0.1) {
+                    wavesurfer.current.setTime(currentSeg.start);
+                }
+            }
+        });
         wavesurfer.current.on('seeking', (time) => setCurrentTime(time));
         wavesurfer.current.on('interaction', (time) => setCurrentTime(time));
         wavesurfer.current.on('play', () => setIsPlaying(true));
@@ -334,6 +355,7 @@ export default function VoiceAnalysis() {
     const handleWordClick = (startTime) => {
         if (window.getSelection().toString().trim().length > 0) return;
         if (wavesurfer.current) {
+            setRepeatMode(false);
             wavesurfer.current.setTime(startTime);
             wavesurfer.current.play();
         }
@@ -353,15 +375,15 @@ export default function VoiceAnalysis() {
     `;
 
     return (
-        <div className="space-y-6 relative">
+        <div className="h-[calc(100svh-80px)] md:h-[calc(100vh-105px)] flex flex-col p-2 pb-8 space-y-4 overflow-hidden relative">
             <style>{customStyles}</style>
 
             {/* Tab Navigation (Migrated from VoiceManagement style) */}
             <div id="analysis-tabs-container" className="relative mb-6 border-b" style={{ borderColor: colors.border }}>
                 <div className="flex">
                     {[
-                        { key: 'auto', label: '上传MP3并生成JSON' },
-                        { key: 'manual', label: '上传MP3及关联JSON' }
+                        { key: 'auto', label: 'ANALYSE MP3' },
+                        { key: 'manual', label: 'UPLOAD STUFF' }
                     ].map((tab) => (
                         <button
                             key={tab.key}
@@ -390,20 +412,23 @@ export default function VoiceAnalysis() {
             {uploadMode === 'auto' && (
                 <div className="rounded-xl p-4 md:p-6 shadow-sm bg-white border mb-4" style={{ borderColor: colors.border }}>
                     <div
-                        className="flex items-center justify-between text-sm font-bold pb-2 border-b select-none"
+                        onClick={() => setIsTuningOpen(!isTuningOpen)}
+                        className="flex items-center justify-between text-sm font-bold pb-2 border-b select-none cursor-pointer group hover:bg-stone-50/50 transition-colors"
                         style={{ color: colors.primary, borderColor: colors.border }}
                     >
                         <div className="flex items-center gap-2">
                             <span>Deep Tuning Profile</span>
                             <ChevronDown
                                 size={16}
-                                onClick={() => setIsTuningOpen(!isTuningOpen)}
-                                className={`md:hidden text-stone-400 hover:text-stone-600 cursor-pointer transition-transform duration-200 ${isTuningOpen ? 'rotate-180' : ''}`}
+                                className={`text-stone-400 group-hover:text-stone-600 transition-transform duration-200 ${isTuningOpen ? 'rotate-180' : ''}`}
                             />
                         </div>
                         <div
-                            className="relative flex items-center cursor-pointer outline-none"
-                            onClick={() => setIsInfoOpen(!isInfoOpen)}
+                            className="relative flex items-center outline-none"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsInfoOpen(!isInfoOpen);
+                            }}
                         >
                             <Info size={16} className={`text-red-500 font-bold active:scale-90 transition-transform ${isInfoOpen ? 'scale-110' : 'hover:scale-110'}`} />
                             <div className={`absolute right-0 top-full mt-2 w-72 p-3 bg-white border border-stone-200 shadow-xl rounded-lg text-xs leading-relaxed text-stone-600 transition-all duration-200 z-50 ${isInfoOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
@@ -414,7 +439,7 @@ export default function VoiceAnalysis() {
                         </div>
                     </div>
 
-                    <div className={`space-y-4 md:space-y-5 mt-4 md:mt-5 ${isTuningOpen ? 'block' : 'hidden md:block'}`}>
+                    <div className={`space-y-4 md:space-y-5 mt-4 md:mt-5 ${isTuningOpen ? 'block' : 'hidden'}`}>
                         {/* Row 1: Language & CPU */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
@@ -528,8 +553,8 @@ export default function VoiceAnalysis() {
                         <label
                             htmlFor="auto-upload"
                             className="flex justify-center items-center px-6 py-2.5 rounded-full text-white font-bold text-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer group min-w-[180px]"
-                            style={{ 
-                                backgroundColor: colors.primary, 
+                            style={{
+                                backgroundColor: colors.primary,
                                 opacity: loading ? 0.6 : 1,
                                 cursor: loading ? 'not-allowed' : 'pointer'
                             }}
@@ -546,7 +571,7 @@ export default function VoiceAnalysis() {
                         <label
                             htmlFor="manual-mp3-upload"
                             className="flex justify-center items-center px-6 py-2.5 rounded-full text-white font-bold text-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer group min-w-[160px]"
-                            style={{ 
+                            style={{
                                 backgroundColor: colors.primary,
                                 opacity: loading ? 0.6 : 1,
                                 cursor: loading ? 'not-allowed' : 'pointer'
@@ -559,7 +584,7 @@ export default function VoiceAnalysis() {
                         <label
                             htmlFor="manual-json-upload"
                             className="flex justify-center items-center px-6 py-2.5 rounded-full text-white font-bold text-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer group min-w-[160px]"
-                            style={{ 
+                            style={{
                                 backgroundColor: colors.accent,
                                 opacity: loading ? 0.6 : 1,
                                 cursor: loading ? 'not-allowed' : 'pointer'
@@ -572,8 +597,8 @@ export default function VoiceAnalysis() {
             </div>
 
             {transcript && (
-                <div className="rounded-xl p-6 shadow-lg bg-white">
-                    <div className="md:p-6 border-b"
+                <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl p-4 md:p-6 shadow-xl border border-stone-100 overflow-hidden">
+                    <div className="md:px-6 md:pb-6 md:pt-0 border-b"
                         style={{ borderColor: colors.border }}>
 
                         {/* Desktop: Controls - hidden on mobile */}
@@ -604,6 +629,13 @@ export default function VoiceAnalysis() {
                             <button onClick={() => setPlaybackRate(1.0)}
                                 className="p-2.5 rounded-full border border-stone-200 bg-white/60 text-stone-500 shadow-sm">
                                 <RotateCcw size={16} /></button>
+                            <button
+                                onClick={() => setRepeatMode(!repeatMode)}
+                                title={repeatMode ? "取消循环" : "单句循环"}
+                                className={`p-2.5 rounded-full border transition-all duration-200 ${repeatMode ? "bg-[#7d8d9c] text-white border-[#7d8d9c] shadow-inner" : "bg-white/60 border-stone-200 text-stone-500 shadow-sm"}`}
+                            >
+                                <Repeat size={16} className={repeatMode ? "animate-pulse" : ""} />
+                            </button>
                         </div>
 
                         {/* Mobile: 5-button controls */}
@@ -663,12 +695,8 @@ export default function VoiceAnalysis() {
                                 </button>
 
                                 <div
-                                    onClick={() => {
-                                        const currentIdx = [0.5, 0.75, 1.0, 1.25, 1.5].indexOf(playbackRate);
-                                        const newIdx = currentIdx < 4 ? currentIdx + 1 : 4;
-                                        setPlaybackRate([0.5, 0.75, 1.0, 1.25, 1.5][newIdx]);
-                                    }}
-                                    className="text-sm font-bold text-stone-600 cursor-pointer px-1"
+                                    onClick={() => setRepeatMode(!repeatMode)}
+                                    className={`text-xs font-bold transition-all px-2 py-1 rounded-lg flex items-center justify-center min-w-[40px] ${repeatMode ? "bg-[#7d8d9c] text-white shadow-inner" : "text-stone-600 bg-stone-50"}`}
                                 >
                                     {playbackRate.toFixed(2)}
                                 </div>
@@ -702,13 +730,19 @@ export default function VoiceAnalysis() {
                     </div>
 
                     <div ref={scrollContainerRef} onMouseUp={handleTextSelection}
-                        className="md:p-4 p-0 overflow-y-auto cursor-text h-[280px] leading-relaxed slim-scroll scroll-smooth"
-                        style={{ maxHeight: '500px' }}>
+                        className="flex-1 min-h-0 md:p-4 p-0 overflow-y-auto cursor-text leading-relaxed slim-scroll scroll-smooth"
+                    >
                         {transcript.map((line, idx) => {
                             const isLineActive = currentTime >= line.start && currentTime <= line.end;
                             return (
                                 <div key={idx} data-index={idx}
-                                    className={`p-2 rounded-lg transition-all duration-300 ${isLineActive ? 'shadow-inner' : ''}`}
+                                    onClick={() => {
+                                        if (window.getSelection().toString().trim().length > 0) return;
+                                        setRepeatMode(false);
+                                        wavesurfer.current?.setTime(line.start);
+                                        wavesurfer.current?.play();
+                                    }}
+                                    className={`p-2 rounded-lg transition-all duration-300 cursor-pointer ${isLineActive ? 'shadow-inner' : ''}`}
                                     style={isLineActive ? { backgroundColor: '#e8ddd4' } : {}}>
                                     <div className="flex flex-wrap gap-x-1 text-[14px] leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
                                         {line.words.map((w, wIdx) => (
