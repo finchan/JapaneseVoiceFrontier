@@ -19,6 +19,8 @@ const API_CONFIG = {
 
         // Voice Upload
         transcribe: '/transcribe',
+        uploadManual: '/api/upload_manual',
+        previewAudio: '/api/preview_audio',
 
         // Voice Management
         manageFiles: '/api/manage/files',

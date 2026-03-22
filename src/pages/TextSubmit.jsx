@@ -37,13 +37,13 @@ export default function TextSubmit() {
             formData.append('text', text);
             formData.append('role', role);
 
-        const res = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.convert), {
+            const res = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.convert), {
                 method: 'POST',
                 body: formData,
             });
 
             if (!res.ok) throw new Error('Server error');
-            
+
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -53,7 +53,7 @@ export default function TextSubmit() {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            
+
             setStatus('success');
         } catch {
             setStatus('error');
@@ -83,12 +83,12 @@ export default function TextSubmit() {
             `}</style>
 
             <div className="w-full md:w-[800px] lg:w-[1024px] bg-white rounded-2xl md:rounded-[32px] p-6 md:p-12 shadow-sm border flex flex-col"
-                 style={{ borderColor: colors.border, minHeight: '500px' }}>
+                style={{ borderColor: colors.border, minHeight: '500px' }}>
 
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-4 md:mb-8">
                     <FileText size={18} style={{ color: colors.primary }} />
-                    <h2 className="text-xl md:text-2xl font-bold" style={{ color: colors.text }}>TEXT TO VOICE</h2>
+                    <h2 className="text-xl md:text-xl font-bold" style={{ color: colors.text }}>TEXT TO VOICE</h2>
                 </div>
 
                 {/* Hint */}

@@ -1,7 +1,7 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import {Play, Pause, Upload, Loader2, RotateCcw, Gauge, ChevronUp, ChevronDown, SkipBack, SkipForward} from 'lucide-react';
-import WordLookup, {WordLookupPanel} from '../components/WordLookup';
+import { Play, Pause, Upload, Info, Loader2, RotateCcw, Gauge, ChevronUp, ChevronDown, SkipBack, SkipForward } from 'lucide-react';
+import WordLookup, { WordLookupPanel } from '../components/WordLookup';
 import API_CONFIG from '../config';
 
 // Morandi color scheme
@@ -37,15 +37,54 @@ export default function VoiceAnalysis() {
     const [audioUrl, setAudioUrl] = useState(null);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [isRateOpen, setIsRateOpen] = useState(false);
+    const [isTuningOpen, setIsTuningOpen] = useState(false);
+    const [isInfoOpen, setIsInfoOpen] = useState(false);
+    const [uploadMode, setUploadMode] = useState('auto');
+    const [cacheAuto, setCacheAuto] = useState({ transcript: null, audioUrl: null, currentTime: 0 });
+    const [cacheManual, setCacheManual] = useState({ transcript: null, audioUrl: null, currentTime: 0 });
+    const [tabIndicatorStyle, setTabIndicatorStyle] = useState({ left: 0, width: 0 });
+
+    useEffect(() => {
+        const tabsContainer = document.getElementById('analysis-tabs-container');
+        const activeButton = tabsContainer?.querySelector(`[data-tab="${uploadMode}"]`);
+        if (activeButton) {
+            setTabIndicatorStyle({
+                left: activeButton.offsetLeft,
+                width: activeButton.offsetWidth
+            });
+        }
+    }, [uploadMode]);
+
+    const isTestingEnv = API_CONFIG.baseURL.includes('localhost') || API_CONFIG.baseURL.includes('127.0.0.1');
 
     const [language, setLanguage] = useState('ja');
-    const [cpuThreads, setCpuThreads] = useState(4);
+    const [cpuThreads, setCpuThreads] = useState(isTestingEnv ? 4 : 1);
     const [initialPrompt, setInitialPrompt] = useState('こんにちは。今日は漢字とかなを使って日本語で話します。');
     const [vadFilter, setVadFilter] = useState(false);
     const [vadMs, setVadMs] = useState(3000);
     const [gapVal, setGapVal] = useState(0.7);
     const [noSpeechVal, setNoSpeechVal] = useState(0.6);
     const [beamVal, setBeamVal] = useState(7);
+
+    const handleModeSwitch = (mode) => {
+        if (uploadMode === mode) return;
+
+        if (uploadMode === 'auto') setCacheAuto({ transcript, audioUrl, currentTime });
+        else setCacheManual({ transcript, audioUrl, currentTime });
+
+        setUploadMode(mode);
+
+        if (wavesurfer.current) {
+            wavesurfer.current.destroy();
+            wavesurfer.current = null;
+        }
+
+        const targetCache = mode === 'auto' ? cacheAuto : cacheManual;
+        setTranscript(targetCache.transcript);
+        setAudioUrl(targetCache.audioUrl);
+        setCurrentTime(targetCache.currentTime);
+        setIsPlaying(false);
+    };
 
     const handleLanguageChange = (e) => {
         const lang = e.target.value;
@@ -57,7 +96,7 @@ export default function VoiceAnalysis() {
         }
     };
 
-    const {lookup, hideLookup, inflectionMode, toggleMode, fetchDictionaryData, handleTextSelection, getMoraList, parseAccentPattern} = WordLookup();
+    const { lookup, hideLookup, inflectionMode, toggleMode, fetchDictionaryData, handleTextSelection, getMoraList, parseAccentPattern } = WordLookup();
 
     const lastScrollIndex = useRef(-1);
 
@@ -66,7 +105,7 @@ export default function VoiceAnalysis() {
         if (!container || !transcript) return;
         const activeElement = container.querySelector(`[data-index="${index}"]`);
         if (activeElement && index !== lastScrollIndex.current) {
-            activeElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+            activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             lastScrollIndex.current = index;
         }
     };
@@ -171,45 +210,73 @@ export default function VoiceAnalysis() {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Cleanup previous state
-        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        // Cleanup active state only, without terminating blob references used in background caches
+        if (audioUrl && audioUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(audioUrl);
+        }
         if (wavesurfer.current) {
             wavesurfer.current.destroy();
             wavesurfer.current = null;
         }
         setTranscript(null);
         setCurrentTime(0);
+        setIsPlaying(false);
 
         setLoading(true);
         const formData = new FormData();
         formData.append("file", file);
         const currentRole = localStorage.getItem('user_role') || 'guest';
         formData.append("role", currentRole);
-        formData.append("language", language);
-        formData.append("initial_prompt", initialPrompt);
-        formData.append("vad_filter", vadFilter);
-        formData.append("vad_ms", vadMs);
-        formData.append("gap_val", gapVal);
-        formData.append("no_speech_val", noSpeechVal);
-        formData.append("beam_val", beamVal);
-        formData.append("cpu_threads", cpuThreads);
+
         try {
-            const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.transcribe), {method: "POST", body: formData});
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+            if (uploadMode === 'auto') {
+                formData.append("language", language);
+                formData.append("initial_prompt", initialPrompt);
+                formData.append("vad_filter", vadFilter);
+                formData.append("vad_ms", vadMs);
+                formData.append("gap_val", gapVal);
+                formData.append("no_speech_val", noSpeechVal);
+                formData.append("beam_val", beamVal);
+                formData.append("cpu_threads", cpuThreads);
+
+                const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.transcribe), { method: "POST", body: formData });
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                const result = await response.json();
+
+                const transcriptData = result.data || result;
+                if (!Array.isArray(transcriptData)) throw new Error("Invalid response format");
+
+                setAudioUrl(URL.createObjectURL(file));
+                setTranscript(transcriptData);
+            } else {
+                const response = await fetch(API_CONFIG.buildURL(API_CONFIG.endpoints.uploadManual), { method: "POST", body: formData });
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                const result = await response.json();
+
+                if (result.status === "pending") {
+                    alert(result.message); // Displays "等待对应的 json 文件" / "等待对应的 mp3 文件"
+                } else if (result.status === "ready") {
+                    const transcriptData = result.data || result;
+                    if (!Array.isArray(transcriptData)) throw new Error("Invalid response format");
+
+                    // Fetch the audio as a blob to cache locally and avoid re-downloads during mode switching
+                    const audioResponse = await fetch(result.audio_url);
+                    if (!audioResponse.ok) throw new Error("Failed to fetch audio stream");
+                    const audioBlob = await audioResponse.blob();
+                    const localBlobUrl = URL.createObjectURL(audioBlob);
+
+                    setAudioUrl(localBlobUrl);
+                    setTranscript(transcriptData);
+                } else {
+                    throw new Error(result.error || "Unknown error occurred");
+                }
             }
-            const result = await response.json();
-            const transcriptData = result.data || result;
-            if (!Array.isArray(transcriptData)) {
-                throw new Error("Invalid response format");
-            }
-            setAudioUrl(URL.createObjectURL(file));
-            setTranscript(transcriptData);
         } catch (err) {
-            console.error("Transcription error:", err);
-            alert("识别失败，请重试");
+            console.error("Upload/Transcription error:", err);
+            alert("操作失败，请重试");
         } finally {
             setLoading(false);
+            e.target.value = null; // Ensure same file can be uploaded back-to-back if intended
         }
     };
 
@@ -233,6 +300,13 @@ export default function VoiceAnalysis() {
         wavesurfer.current.on('interaction', (time) => setCurrentTime(time));
         wavesurfer.current.on('play', () => setIsPlaying(true));
         wavesurfer.current.on('pause', () => setIsPlaying(false));
+
+        // Restore progress if returning to a cached session
+        wavesurfer.current.once('ready', () => {
+            if (currentTime > 0) {
+                wavesurfer.current.setTime(currentTime);
+            }
+        });
     };
 
     useEffect(() => {
@@ -246,6 +320,15 @@ export default function VoiceAnalysis() {
             }
         };
     }, [transcript, audioUrl]);
+
+    useEffect(() => {
+        // Only revoke on unmount to preserve caching during mode-switches
+        return () => {
+            if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+            if (cacheAuto.audioUrl && cacheAuto.audioUrl.startsWith('blob:')) URL.revokeObjectURL(cacheAuto.audioUrl);
+            if (cacheManual.audioUrl && cacheManual.audioUrl.startsWith('blob:')) URL.revokeObjectURL(cacheManual.audioUrl);
+        };
+    }, []);
 
 
     const handleWordClick = (startTime) => {
@@ -273,145 +356,237 @@ export default function VoiceAnalysis() {
         <div className="space-y-6 relative">
             <style>{customStyles}</style>
 
-            <div className="flex items-center justify-center rounded-full p-2 text-sm">
-                服务器的内存只有2GB，离线运行faster-whisper-large-v3-turbo-ct2模型，没有GPU，双核CPU借助硬盘处理。
+            {/* Tab Navigation (Migrated from VoiceManagement style) */}
+            <div id="analysis-tabs-container" className="relative mb-6 border-b" style={{ borderColor: colors.border }}>
+                <div className="flex">
+                    {[
+                        { key: 'auto', label: '上传MP3并生成JSON' },
+                        { key: 'manual', label: '上传MP3及关联JSON' }
+                    ].map((tab) => (
+                        <button
+                            key={tab.key}
+                            data-tab={tab.key}
+                            onClick={() => handleModeSwitch(tab.key)}
+                            className="flex-1 py-3 px-4 text-[15px] font-black tracking-wider transition-colors"
+                            style={{
+                                color: uploadMode === tab.key ? colors.primary : colors.textLight
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+                <div
+                    className="absolute bottom-0 h-[3px] rounded-full transition-all duration-300 ease-out"
+                    style={{
+                        left: tabIndicatorStyle.left,
+                        width: tabIndicatorStyle.width,
+                        backgroundColor: colors.primary
+                    }}
+                />
             </div>
 
             {/* Settings Panel */}
-            <div className="rounded-xl p-6 shadow-sm bg-white border mb-4 space-y-5" style={{borderColor: colors.border}}>
-                <div className="flex items-center text-sm font-bold pb-2 border-b" style={{color: colors.primary, borderColor: colors.border}}>
-                    Deep Tuning Profile
-                </div>
-                
-                {/* Row 1: Language & CPU */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <label className="font-bold whitespace-nowrap" style={{color: colors.text}}>语言语种:</label>
-                        <select 
-                            value={language} 
-                            onChange={handleLanguageChange} 
-                            className="bg-transparent border-none outline-none text-stone-700 w-full"
+            {uploadMode === 'auto' && (
+                <div className="rounded-xl p-4 md:p-6 shadow-sm bg-white border mb-4" style={{ borderColor: colors.border }}>
+                    <div
+                        className="flex items-center justify-between text-sm font-bold pb-2 border-b select-none"
+                        style={{ color: colors.primary, borderColor: colors.border }}
+                    >
+                        <div className="flex items-center gap-2">
+                            <span>Deep Tuning Profile</span>
+                            <ChevronDown
+                                size={16}
+                                onClick={() => setIsTuningOpen(!isTuningOpen)}
+                                className={`md:hidden text-stone-400 hover:text-stone-600 cursor-pointer transition-transform duration-200 ${isTuningOpen ? 'rotate-180' : ''}`}
+                            />
+                        </div>
+                        <div
+                            className="relative flex items-center cursor-pointer outline-none"
+                            onClick={() => setIsInfoOpen(!isInfoOpen)}
                         >
-                            <option value="ja">Japense (default)</option>
-                            <option value="auto">Auto</option>
-                            <option value="en">English</option>
-                            <option value="ms">Malay</option>
-                            <option value="id">Indonesian</option>
-                            <option value="vi">Vietnamese</option>
-                            <option value="ru">Russian</option>
-                        </select>
+                            <Info size={16} className={`text-red-500 font-bold active:scale-90 transition-transform ${isInfoOpen ? 'scale-110' : 'hover:scale-110'}`} />
+                            <div className={`absolute right-0 top-full mt-2 w-72 p-3 bg-white border border-stone-200 shadow-xl rounded-lg text-xs leading-relaxed text-stone-600 transition-all duration-200 z-50 ${isInfoOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+                                <span className="text-red-500 font-bold block mb-1">注意:</span>
+                                服务器的内存只有2GB，离线运行faster-whisper-large-v3-turbo-ct2模型，没有GPU，双核CPU借助硬盘处理。<br />
+                                配置低，所以运行速度极其缓慢，请耐心等待。或者通过其他工具TRANSCRIBE MP3. THANK YOU!
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <label className="font-bold whitespace-nowrap" style={{color: colors.text}}>CPU 核数 (Test):</label>
-                        <input 
-                            type="number" 
-                            value={cpuThreads} 
-                            onChange={(e) => setCpuThreads(e.target.value)} 
-                            className="bg-transparent border-none outline-none text-stone-700 w-full"
-                        />
+
+                    <div className={`space-y-4 md:space-y-5 mt-4 md:mt-5 ${isTuningOpen ? 'block' : 'hidden md:block'}`}>
+                        {/* Row 1: Language & CPU */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <label className="font-bold whitespace-nowrap" style={{ color: colors.text }}>语言语种:</label>
+                                <select
+                                    value={language}
+                                    onChange={handleLanguageChange}
+                                    className="bg-transparent border-none outline-none text-stone-700 w-full"
+                                >
+                                    <option value="ja">Japense (default)</option>
+                                    <option value="auto">Auto</option>
+                                    <option value="en">English</option>
+                                    <option value="ms">Malay</option>
+                                    <option value="id">Indonesian</option>
+                                    <option value="vi">Vietnamese</option>
+                                    <option value="ru">Russian</option>
+                                </select>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <label className="font-bold whitespace-nowrap" style={{ color: colors.text }}>CPU 核数:</label>
+                                <input
+                                    type="number"
+                                    value={cpuThreads}
+                                    onChange={(e) => setCpuThreads(e.target.value)}
+                                    disabled={!isTestingEnv}
+                                    title={!isTestingEnv ? "生产环境已锁定为1个CPU" : ""}
+                                    className={`bg-transparent border-none outline-none w-full ${!isTestingEnv ? 'text-stone-400 cursor-not-allowed' : 'text-stone-700'}`}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Row 2: VAD & Gap */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <input
+                                    type="checkbox"
+                                    checked={vadFilter}
+                                    onChange={(e) => setVadFilter(e.target.checked)}
+                                    className="accent-[#9c8c7d]"
+                                    id="vad-filter-cb"
+                                />
+                                <label htmlFor="vad-filter-cb" className="font-bold cursor-pointer" style={{ color: colors.text }}>无声音频(VAD)</label>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <label className="font-bold whitespace-nowrap flex-shrink-0" title="VAD静音切片阈值" style={{ color: colors.text }}>静音(ms):</label>
+                                <input
+                                    type="number"
+                                    value={vadMs}
+                                    onChange={(e) => setVadMs(e.target.value)}
+                                    disabled={!vadFilter}
+                                    className="bg-transparent border-none outline-none text-stone-700 w-full disabled:opacity-50"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <label className="font-bold whitespace-nowrap flex-shrink-0" style={{ color: colors.text }}>断句间隙(Gap):</label>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    value={gapVal}
+                                    onChange={(e) => setGapVal(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-stone-700 w-full"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Row 3: Prompts & Deep Params */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                            <div className="md:col-span-8 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <label className="font-bold whitespace-nowrap flex-shrink-0" style={{ color: colors.text }}>词垫(Prompt):</label>
+                                <input
+                                    type="text"
+                                    value={initialPrompt}
+                                    onChange={(e) => setInitialPrompt(e.target.value)}
+                                    placeholder="留空即默认"
+                                    className="bg-transparent border-none outline-none text-stone-700 w-full"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <label className="font-bold whitespace-nowrap flex-shrink-0" style={{ color: colors.text }}>Beam:</label>
+                                <input
+                                    type="number"
+                                    value={beamVal}
+                                    onChange={(e) => setBeamVal(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-stone-700 w-full"
+                                />
+                            </div>
+                            <div className="md:col-span-2 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
+                                <label className="font-bold whitespace-nowrap flex-shrink-0" title="No Speech Threshold" style={{ color: colors.text }}>静默(NS):</label>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    value={noSpeechVal}
+                                    onChange={(e) => setNoSpeechVal(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-stone-700 w-full"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
+            )}
 
-                {/* Row 2: VAD & Gap */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <input 
-                            type="checkbox" 
-                            checked={vadFilter} 
-                            onChange={(e) => setVadFilter(e.target.checked)} 
-                            className="accent-[#9c8c7d]" 
-                            id="vad-filter-cb"
-                        />
-                        <label htmlFor="vad-filter-cb" className="font-bold cursor-pointer" style={{color: colors.text}}>无声音频(VAD)</label>
+            {/* Action Buttons (Styled like TextSubmit.jsx Convert button) */}
+            <div className="flex justify-center gap-4 mt-2">
+                {uploadMode === 'auto' ? (
+                    <div className="flex flex-col items-center">
+                        <input type="file" accept="audio/*" onChange={handleFileChange} className="hidden" id="auto-upload" />
+                        <label
+                            htmlFor="auto-upload"
+                            className="flex justify-center items-center px-6 py-2.5 rounded-full text-white font-bold text-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer group min-w-[180px]"
+                            style={{ 
+                                backgroundColor: colors.primary, 
+                                opacity: loading ? 0.6 : 1,
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {loading && <Loader2 className="animate-spin mr-2" size={16} />}
+                            <span className="tracking-widest uppercase text-sm">
+                                {loading ? 'Analyzing...' : 'MP3 ANALYSIS'}
+                            </span>
+                        </label>
                     </div>
-                    
-                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <label className="font-bold whitespace-nowrap flex-shrink-0" title="VAD静音切片阈值" style={{color: colors.text}}>静音(ms):</label>
-                        <input 
-                            type="number" 
-                            value={vadMs} 
-                            onChange={(e) => setVadMs(e.target.value)} 
-                            disabled={!vadFilter}
-                            className="bg-transparent border-none outline-none text-stone-700 w-full disabled:opacity-50"
-                        />
-                    </div>
+                ) : (
+                    <div className="flex flex-wrap justify-center gap-4">
+                        <input type="file" accept=".mp3" onChange={handleFileChange} className="hidden" id="manual-mp3-upload" />
+                        <label
+                            htmlFor="manual-mp3-upload"
+                            className="flex justify-center items-center px-6 py-2.5 rounded-full text-white font-bold text-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer group min-w-[160px]"
+                            style={{ 
+                                backgroundColor: colors.primary,
+                                opacity: loading ? 0.6 : 1,
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            <span className="tracking-widest uppercase text-sm">Upload MP3</span>
+                        </label>
 
-                    <div className="flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <label className="font-bold whitespace-nowrap flex-shrink-0" style={{color: colors.text}}>断句间隙(Gap):</label>
-                        <input 
-                            type="number" 
-                            step="0.1" 
-                            value={gapVal} 
-                            onChange={(e) => setGapVal(e.target.value)} 
-                            className="bg-transparent border-none outline-none text-stone-700 w-full"
-                        />
+                        <input type="file" accept=".json" onChange={handleFileChange} className="hidden" id="manual-json-upload" />
+                        <label
+                            htmlFor="manual-json-upload"
+                            className="flex justify-center items-center px-6 py-2.5 rounded-full text-white font-bold text-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer group min-w-[160px]"
+                            style={{ 
+                                backgroundColor: colors.accent,
+                                opacity: loading ? 0.6 : 1,
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            <span className="tracking-widest uppercase text-sm">Upload JSON</span>
+                        </label>
                     </div>
-                </div>
-
-                {/* Row 3: Prompts & Deep Params */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-8 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <label className="font-bold whitespace-nowrap flex-shrink-0" style={{color: colors.text}}>词垫(Prompt):</label>
-                        <input 
-                            type="text" 
-                            value={initialPrompt} 
-                            onChange={(e) => setInitialPrompt(e.target.value)} 
-                            placeholder="留空即默认"
-                            className="bg-transparent border-none outline-none text-stone-700 w-full"
-                        />
-                    </div>
-                    
-                    <div className="md:col-span-2 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <label className="font-bold whitespace-nowrap flex-shrink-0" style={{color: colors.text}}>Beam:</label>
-                        <input 
-                            type="number" 
-                            value={beamVal} 
-                            onChange={(e) => setBeamVal(e.target.value)} 
-                            className="bg-transparent border-none outline-none text-stone-700 w-full"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2 flex items-center gap-2 text-sm bg-stone-50 p-2 rounded-lg">
-                        <label className="font-bold whitespace-nowrap flex-shrink-0" title="No Speech Threshold" style={{color: colors.text}}>静默(NS):</label>
-                        <input 
-                            type="number" 
-                            step="0.1" 
-                            value={noSpeechVal} 
-                            onChange={(e) => setNoSpeechVal(e.target.value)} 
-                            className="bg-transparent border-none outline-none text-stone-700 w-full"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex items-center justify-center border-2 border-dashed rounded-full p-2 gap-3"
-                 style={{borderColor: colors.border, background: 'radial-gradient(circle at center, #e8e4df 0%, #dce4e8 100%)'}}>
-
-                <input type="file" accept="audio/*" onChange={handleFileChange} className="hidden" id="audio-upload"/>
-                <label htmlFor="audio-upload" className="cursor-pointer flex items-center gap-2">
-                    {loading ? <Loader2 className="animate-spin" style={{color: colors.primary}}/> :
-                        <Upload size={16} style={{color: colors.textLight}}/>}
-                    <span className="font-bold text-stone-900 text-large">MP3 ANALYSIS</span>
-                </label>
+                )}
             </div>
 
             {transcript && (
                 <div className="rounded-xl p-6 shadow-lg bg-white">
                     <div className="md:p-6 border-b"
-                         style={{ borderColor: colors.border}}>
-                        
+                        style={{ borderColor: colors.border }}>
+
                         {/* Desktop: Controls - hidden on mobile */}
                         <div className="hidden md:flex items-center justify-center gap-4 mb-4">
                             <button onClick={() => wavesurfer.current?.playPause()}
-                                    className="w-14 h-14 rounded-full flex items-center justify-center text-white shadow-md hover:scale-105 transition-transform"
-                                    style={{backgroundColor: colors.primary}}>
-                                {isPlaying ? <Pause size={28}/> : <Play size={28} className="ml-1"/>}
+                                className="w-14 h-14 rounded-full flex items-center justify-center text-white shadow-md hover:scale-105 transition-transform"
+                                style={{ backgroundColor: colors.primary }}>
+                                {isPlaying ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
                             </button>
                             <div className="relative" ref={dropdownRef}>
                                 <button onClick={() => setIsRateOpen(!isRateOpen)}
-                                        className="flex items-center bg-white/60 px-4 py-2 rounded-full border border-stone-200 shadow-sm gap-2 min-w-[100px] justify-between text-sm font-bold">
-                                    <Gauge size={16}/> {playbackRate.toFixed(2)}X
+                                    className="flex items-center bg-white/60 px-4 py-2 rounded-full border border-stone-200 shadow-sm gap-2 min-w-[100px] justify-between text-sm font-bold">
+                                    <Gauge size={16} /> {playbackRate.toFixed(2)}X
                                 </button>
                                 {isRateOpen && (
                                     <div
@@ -421,20 +596,20 @@ export default function VoiceAnalysis() {
                                                 setPlaybackRate(r);
                                                 setIsRateOpen(false);
                                             }}
-                                                 className="px-4 py-2 text-sm cursor-pointer hover:bg-stone-50 text-center">{r.toFixed(2)}X</div>
+                                                className="px-4 py-2 text-sm cursor-pointer hover:bg-stone-50 text-center">{r.toFixed(2)}X</div>
                                         ))}
                                     </div>
                                 )}
                             </div>
                             <button onClick={() => setPlaybackRate(1.0)}
-                                    className="p-2.5 rounded-full border border-stone-200 bg-white/60 text-stone-500 shadow-sm">
-                                <RotateCcw size={16}/></button>
+                                className="p-2.5 rounded-full border border-stone-200 bg-white/60 text-stone-500 shadow-sm">
+                                <RotateCcw size={16} /></button>
                         </div>
 
                         {/* Mobile: 5-button controls */}
                         <div className="md:hidden mb-3">
                             <div className="flex items-center justify-between gap-1">
-                                <button 
+                                <button
                                     onClick={() => {
                                         if (!wavesurfer.current) return;
                                         const currentIndex = transcript.findIndex(line => currentTime >= line.start && currentTime <= line.end);
@@ -451,16 +626,16 @@ export default function VoiceAnalysis() {
                                 >
                                     <SkipBack size={16} />
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => wavesurfer.current?.playPause()}
                                     className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90"
-                                    style={{backgroundColor: colors.primary}}
+                                    style={{ backgroundColor: colors.primary }}
                                 >
-                                    {isPlaying ? <Pause size={18}/> : <Play size={18} className="ml-0.5"/>}
+                                    {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => {
                                         if (!wavesurfer.current) return;
                                         const nextIndex = transcript.findIndex(line => line.start > currentTime);
@@ -473,10 +648,10 @@ export default function VoiceAnalysis() {
                                 >
                                     <SkipForward size={16} />
                                 </button>
-                                
+
                                 <div className="w-px h-8 bg-stone-300"></div>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => {
                                         const currentIdx = [0.5, 0.75, 1.0, 1.25, 1.5].indexOf(playbackRate);
                                         const newIdx = currentIdx > 0 ? currentIdx - 1 : 0;
@@ -486,8 +661,8 @@ export default function VoiceAnalysis() {
                                 >
                                     <ChevronUp size={18} />
                                 </button>
-                                
-                                <div 
+
+                                <div
                                     onClick={() => {
                                         const currentIdx = [0.5, 0.75, 1.0, 1.25, 1.5].indexOf(playbackRate);
                                         const newIdx = currentIdx < 4 ? currentIdx + 1 : 4;
@@ -497,8 +672,8 @@ export default function VoiceAnalysis() {
                                 >
                                     {playbackRate.toFixed(2)}
                                 </div>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => {
                                         const currentIdx = [0.5, 0.75, 1.0, 1.25, 1.5].indexOf(playbackRate);
                                         const newIdx = currentIdx < 4 ? currentIdx + 1 : 4;
@@ -512,8 +687,8 @@ export default function VoiceAnalysis() {
                         </div>
 
                         {/* Wave */}
-                        <div 
-                            ref={waveformRef} 
+                        <div
+                            ref={waveformRef}
                             onClick={(e) => {
                                 if (!wavesurfer.current) return;
                                 const rect = e.currentTarget.getBoundingClientRect();
@@ -527,21 +702,21 @@ export default function VoiceAnalysis() {
                     </div>
 
                     <div ref={scrollContainerRef} onMouseUp={handleTextSelection}
-                         className="md:p-4 p-0 overflow-y-auto cursor-text h-[280px] leading-relaxed slim-scroll scroll-smooth"
-                         style={{maxHeight: '500px'}}>
+                        className="md:p-4 p-0 overflow-y-auto cursor-text h-[280px] leading-relaxed slim-scroll scroll-smooth"
+                        style={{ maxHeight: '500px' }}>
                         {transcript.map((line, idx) => {
                             const isLineActive = currentTime >= line.start && currentTime <= line.end;
                             return (
                                 <div key={idx} data-index={idx}
-                                     className={`p-2 rounded-lg transition-all duration-300 ${isLineActive ? 'shadow-inner' : ''}`}
-                                     style={isLineActive ? { backgroundColor: '#e8ddd4' } : {}}>
-                                    <div className="flex flex-wrap gap-x-1 text-base leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
+                                    className={`p-2 rounded-lg transition-all duration-300 ${isLineActive ? 'shadow-inner' : ''}`}
+                                    style={isLineActive ? { backgroundColor: '#e8ddd4' } : {}}>
+                                    <div className="flex flex-wrap gap-x-1 text-[14px] leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
                                         {line.words.map((w, wIdx) => (
                                             <span
                                                 key={wIdx}
                                                 onClick={() => handleWordClick(w.start)}
-                                                className={`px-0 rounded transition-colors text-base cursor-pointer ${currentTime >= w.start && currentTime <= w.end ? 'bg-orange-200 font-bold' : ''}`}
-                                                style={{color: colors.text}}
+                                                className={`px-0 rounded transition-colors text-[14px] cursor-pointer ${currentTime >= w.start && currentTime <= w.end ? 'bg-orange-200 font-bold' : ''}`}
+                                                style={{ color: colors.text }}
                                             >
                                                 {w.word}
                                             </span>
@@ -554,10 +729,10 @@ export default function VoiceAnalysis() {
                 </div>
             )}
 
-            <WordLookupPanel 
-                lookup={lookup} 
-                inflectionMode={inflectionMode} 
-                toggleMode={toggleMode} 
+            <WordLookupPanel
+                lookup={lookup}
+                inflectionMode={inflectionMode}
+                toggleMode={toggleMode}
                 hideLookup={hideLookup}
                 fetchDictionaryData={fetchDictionaryData}
                 getMoraList={getMoraList}

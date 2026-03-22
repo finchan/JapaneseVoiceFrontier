@@ -339,7 +339,7 @@ export default function VerbConjugation() {
             <div className="vc-row md:hidden flex p-0 overflow-hidden mb-1" style={{ padding: 0, backgroundColor: 'transparent', border: 'none' }}>
                 <button
                     onClick={() => setMobileConjTab('BASIC')}
-                    className="flex-1 py-3 text-xs font-bold transition-all"
+                    className="flex-1 py-3 text-[15px] font-bold transition-all"
                     style={{
                         backgroundColor: 'transparent',
                         color: mobileConjTab === 'BASIC' ? colors.primary : colors.textLight,
@@ -350,7 +350,7 @@ export default function VerbConjugation() {
                 </button>
                 <button
                     onClick={() => setMobileConjTab('AUX')}
-                    className="flex-1 py-3 text-xs font-bold transition-all"
+                    className="flex-1 py-3 text-[15px] font-bold transition-all"
                     style={{
                         backgroundColor: 'transparent',
                         color: mobileConjTab === 'AUX' ? colors.primary : colors.textLight,

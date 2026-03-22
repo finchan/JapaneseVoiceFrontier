@@ -233,9 +233,9 @@ export default function VoiceManagement() {
             <div id="tabs-container" className="relative mb-6 border-b" style={{ borderColor: colors.border }}>
                 <div className="flex">
                     {[
-                        { key: 'archive', label: 'VOICE ARCHIVE' },
-                        { key: 'cleaning', label: 'VOICE CLEANING' },
-                        { key: 'updating', label: 'VOICE UPDATING' }
+                        { key: 'archive', label: 'ARCHIVING' },
+                        { key: 'cleaning', label: 'CLEANING' },
+                        { key: 'updating', label: 'UPDATING' }
                     ].map((tab) => (
                         <button
                             key={tab.key}

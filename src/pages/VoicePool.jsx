@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useRef} from "react";
 import WaveSurfer from "wavesurfer.js";
-import {BookOpen, Layers, FileAudio, Play, Pause, Loader2, ChevronUp, ChevronDown, SkipBack, SkipForward, Gauge, RotateCcw} from "lucide-react";
+import {BookOpen, Layers, FileAudio, Play, Pause, Loader2, ChevronUp, ChevronDown, SkipBack, SkipForward, Gauge, RotateCcw, Repeat} from "lucide-react";
 import WordLookup, {WordLookupPanel} from '../components/WordLookup';
 import API_CONFIG from '../config';
 
@@ -36,11 +36,16 @@ export default function VoicePool() {
     const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
     const [mobileTab, setMobileTab] = useState('BOOKS');
     const [mobileMenuCollapsed, setMobileMenuCollapsed] = useState(false);
+    const [repeatMode, setRepeatMode] = useState(false);
+
 
     const wavesurferRef = useRef(null);
     const waveContainerRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const activeLineRef = useRef(null);
+    const repeatModeRef = useRef(false);
+    const segmentsRef = useRef([]);
+
 
     const {lookup, hideLookup, inflectionMode, toggleMode, fetchDictionaryData, handleTextSelection, getMoraList, parseAccentPattern} = WordLookup();
 
@@ -78,6 +83,7 @@ export default function VoicePool() {
                 wavesurferRef.current.setPlaybackRate(newSpeed);
             } else if (e.code === 'ArrowLeft') {
                 e.preventDefault();
+                if (repeatModeRef.current) setRepeatMode(false);
                 // 获取当前播放索引
                 const currentIndex = segments.findIndex(
                     seg => currentTime >= seg.start && currentTime <= seg.end
@@ -96,6 +102,7 @@ export default function VoicePool() {
                 wavesurferRef.current.play();
             } else if (e.code === 'ArrowRight') {
                 e.preventDefault();
+                if (repeatModeRef.current) setRepeatMode(false);
                 // 右键：跳转到下一句开头
                 const nextIndex = segments.findIndex(seg => seg.start > currentTime);
                 if (nextIndex !== -1) {
@@ -107,6 +114,11 @@ export default function VoicePool() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [currentTime, segments, playbackSpeed]);
+    
+    // 同步 Ref 以便在事件监听器中使用最新状态
+    useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
+    useEffect(() => { segmentsRef.current = segments; }, [segments]);
+
 
 
     // 字幕自动滚动居中
@@ -187,9 +199,19 @@ export default function VoicePool() {
         ws.setPlaybackRate(playbackSpeed);
         ws.on("play", () => setIsPlaying(true));
         ws.on("pause", () => setIsPlaying(false));
-        ws.on("audioprocess", (time) => setCurrentTime(time));
+        ws.on("audioprocess", (time) => {
+            setCurrentTime(time);
+            // 单句循环逻辑
+            if (repeatModeRef.current) {
+                const currentSegment = segmentsRef.current.find(seg => time >= seg.start && time <= seg.end);
+                if (currentSegment && time >= currentSegment.end - 0.1) {
+                    ws.setTime(currentSegment.start);
+                }
+            }
+        });
         ws.on("seeking", (time) => setCurrentTime(time));
         ws.on("interaction", (time) => setCurrentTime(time));
+
         ws.load(url);
     };
 
@@ -201,6 +223,7 @@ export default function VoicePool() {
     const handleWordClick = (e, startTime) => {
         e.stopPropagation();
         if (window.getSelection().toString().trim().length > 0) return;
+        if (repeatMode) setRepeatMode(false);
         wavesurferRef.current?.setTime(startTime);
         wavesurferRef.current?.play();
     };
@@ -253,7 +276,7 @@ export default function VoicePool() {
             <div className="hidden md:grid grid-cols-3 h-[165px] rounded-xl border overflow-hidden bg-white shadow-sm" style={{ borderColor: colors.border }}>
 
                 <div className="border-r custom-scroll overflow-y-auto" style={{ backgroundColor: colors.bgBook }}>
-                    <div className="p-3 sticky top-0 bg-inherit flex items-center gap-2 font-bold text-[13px] text-stone-700 border-b">
+                    <div className="p-3 sticky top-0 bg-inherit flex items-center gap-2 font-bold text-[15px] text-stone-700 border-b">
                         <BookOpen size={14} /> BOOKS
                     </div>
                     {books.map(b => (
@@ -262,7 +285,7 @@ export default function VoicePool() {
                 </div>
 
                 <div className="border-r custom-scroll overflow-y-auto" style={{ backgroundColor: colors.bgCourse }}>
-                    <div className="p-3 sticky top-0 bg-inherit flex items-center gap-2 font-bold text-[13px] text-stone-700 border-b">
+                    <div className="p-3 sticky top-0 bg-inherit flex items-center gap-2 font-bold text-[15px] text-stone-700 border-b">
                         <Layers size={14} /> COURSES
                     </div>
                     {courses.map(c => (
@@ -271,7 +294,7 @@ export default function VoicePool() {
                 </div>
 
                 <div className="custom-scroll overflow-y-auto" style={{ backgroundColor: colors.bgFile }}>
-                    <div className="p-3 sticky top-0 bg-inherit flex items-center gap-2 font-bold text-[13px] text-stone-700 border-b">
+                    <div className="p-3 sticky top-0 bg-inherit flex items-center gap-2 font-bold text-[15px] text-stone-700 border-b">
                         <FileAudio size={14} /> FILES
                     </div>
                     {files.map(f => (
@@ -303,7 +326,7 @@ export default function VoicePool() {
                         <div className="flex border-b" style={{ backgroundColor: colors.bgBook }}>
                             <button 
                                 onClick={() => setMobileTab('BOOKS')}
-                                className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'BOOKS' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                                className={`flex-1 py-3 text-[15px] font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'BOOKS' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
                             >
                                 <BookOpen size={12} /> BOOKS
                                 {mobileTab === 'BOOKS' && !selectedBook && (
@@ -312,7 +335,7 @@ export default function VoicePool() {
                             </button>
                             <button 
                                 onClick={() => setMobileTab('COURSES')}
-                                className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'COURSES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                                className={`flex-1 py-3 text-[15px] font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'COURSES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
                             >
                                 <Layers size={12} /> COURSES
                                 {mobileTab === 'COURSES' && !selectedCourse && (
@@ -321,7 +344,7 @@ export default function VoicePool() {
                             </button>
                             <button 
                                 onClick={() => setMobileTab('FILES')}
-                                className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'FILES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
+                                className={`flex-1 py-3 text-[15px] font-bold flex items-center justify-center gap-1 transition-colors ${mobileTab === 'FILES' ? 'bg-white text-stone-800' : 'text-stone-500'}`}
                             >
                                 <FileAudio size={12} /> FILES
                                 {mobileTab === 'FILES' && !selectedFile && (
@@ -393,7 +416,13 @@ export default function VoicePool() {
                                         {SPEEDS.map(s => <option key={s} value={s}>{s.toFixed(2)}X</option>)}
                                     </select>
                                 </div>
-                                <button onClick={() => handleSpeedChange(1.0)} className="p-2 hover:bg-stone-200 rounded-xl transition-colors text-stone-500"><RotateCcw size={18}/></button>
+                                <button 
+                                    onClick={() => setRepeatMode(!repeatMode)} 
+                                    title={repeatMode ? "取消循环" : "单句循环"}
+                                    className={`p-2 rounded-xl transition-all duration-200 ${repeatMode ? "bg-[#7d8d9c] text-white shadow-inner" : "hover:bg-stone-200 text-stone-500"}`}
+                                >
+                                    <Repeat size={18} className={repeatMode ? "animate-pulse" : ""}/>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -405,6 +434,7 @@ export default function VoicePool() {
                             <button 
                                 onClick={() => {
                                     if (!wavesurferRef.current) return;
+                                    if (repeatMode) setRepeatMode(false);
                                     const currentIndex = segments.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
                                     const currentLineStart = segments[currentIndex]?.start || 0;
                                     if (currentTime - currentLineStart > 1.5) {
@@ -433,6 +463,7 @@ export default function VoicePool() {
                             <button 
                                 onClick={() => {
                                     if (!wavesurferRef.current) return;
+                                    if (repeatMode) setRepeatMode(false);
                                     const nextIndex = segments.findIndex(seg => seg.start > currentTime);
                                     if (nextIndex !== -1) {
                                         wavesurferRef.current.setTime(segments[nextIndex].start);
@@ -459,16 +490,12 @@ export default function VoicePool() {
                                 <ChevronUp size={18} />
                             </button>
                             
-                            {/* Rate as text */}
+                            {/* Rate as text (Toggles Repeat Mode on Mobile) */}
                             <div 
-                                onClick={() => {
-                                    const currentIdx = SPEEDS.indexOf(playbackSpeed);
-                                    const newIdx = currentIdx < SPEEDS.length - 1 ? currentIdx + 1 : SPEEDS.length - 1;
-                                    handleSpeedChange(SPEEDS[newIdx]);
-                                }}
-                                className="text-sm font-bold text-stone-600 cursor-pointer px-1"
+                                onClick={() => setRepeatMode(!repeatMode)}
+                                className={`text-xs font-bold transition-all px-2 py-1 rounded-lg flex items-center justify-center min-w-[40px] ${repeatMode ? "bg-[#7d8d9c] text-white shadow-inner" : "text-stone-600 bg-stone-50"}`}
                             >
-                                {playbackSpeed.toFixed(2)}
+                                <span className={repeatMode ? "animate-pulse" : ""}>{playbackSpeed.toFixed(2)}</span>
                             </div>
                             
                             {/* ↓ Down - Faster - Circle */}
@@ -509,12 +536,13 @@ export default function VoicePool() {
                                     <div key={idx} ref={isActive ? activeLineRef : null} 
                                         onClick={() => {
                                             if (window.getSelection().toString().trim().length > 0) return;
+                                            if (repeatMode) setRepeatMode(false);
                                             wavesurferRef.current?.setTime(seg.start);
                                             wavesurferRef.current?.play();
                                         }}
                                         className={`p-2 rounded-lg cursor-pointer transition-all duration-300 ${isActive ? "shadow-inner" : ""}`}
                                         style={isActive ? { backgroundColor: '#e8ddd4' } : {}}>
-                                        <div className="flex flex-wrap gap-x-1 text-base leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
+                                        <div className="flex flex-wrap gap-x-1 text-[14px] leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
 
                                             {renderWords(seg)}
                                         </div>
