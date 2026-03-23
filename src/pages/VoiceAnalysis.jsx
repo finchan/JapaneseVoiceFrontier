@@ -744,12 +744,12 @@ export default function VoiceAnalysis() {
                                     }}
                                     className={`p-2 rounded-lg transition-all duration-300 cursor-pointer ${isLineActive ? 'shadow-inner' : ''}`}
                                     style={isLineActive ? { backgroundColor: '#e8ddd4' } : {}}>
-                                    <div className="flex flex-wrap gap-x-1 text-[14px] leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
+                                    <div className="flex flex-wrap gap-x-1 text-[15px] leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
                                         {line.words.map((w, wIdx) => (
                                             <span
                                                 key={wIdx}
                                                 onClick={() => handleWordClick(w.start)}
-                                                className={`px-0 rounded transition-colors text-[14px] cursor-pointer ${currentTime >= w.start && currentTime <= w.end ? 'bg-orange-200 font-bold' : ''}`}
+                                                className={`px-0 rounded transition-colors text-[15px] cursor-pointer ${currentTime >= w.start && currentTime <= w.end ? 'bg-orange-200 font-bold' : ''}`}
                                                 style={{ color: colors.text }}
                                             >
                                                 {w.word}

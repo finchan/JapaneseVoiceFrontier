@@ -531,7 +531,7 @@ export default function VoicePool() {
                                 onClick={() => {
                                     const currentIdx = SPEEDS.indexOf(playbackSpeed);
                                     const newIdx = currentIdx > 0 ? currentIdx - 1 : 0;
-                                    handleSpeedChange(SPEEDS[newIdx]);
+                                    setPlaybackSpeed(SPEEDS[newIdx]);
                                 }}
                                 className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
                             >
@@ -551,7 +551,7 @@ export default function VoicePool() {
                                 onClick={() => {
                                     const currentIdx = SPEEDS.indexOf(playbackSpeed);
                                     const newIdx = currentIdx < SPEEDS.length - 1 ? currentIdx + 1 : SPEEDS.length - 1;
-                                    handleSpeedChange(SPEEDS[newIdx]);
+                                    setPlaybackSpeed(SPEEDS[newIdx]);
                                 }}
                                 className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-600 shadow active:scale-90 transition-all"
                             >
@@ -590,7 +590,7 @@ export default function VoicePool() {
                                         }}
                                         className={`p-2 rounded-lg cursor-pointer transition-all duration-300 ${isActive ? "shadow-inner" : ""}`}
                                         style={isActive ? { backgroundColor: '#e8ddd4' } : {}}>
-                                        <div className="flex flex-wrap gap-x-1 text-[14px] leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
+                                        <div className="flex flex-wrap gap-x-1 text-[15px] leading-relaxed" style={{ color: colors.text, fontFamily: "'Noto Sans JP', sans-serif" }}>
 
                                             {renderWords(seg)}
                                         </div>

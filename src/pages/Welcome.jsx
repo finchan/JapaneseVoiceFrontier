@@ -38,7 +38,7 @@ const menuStructure = [
     },
 ];
 
-export default function Welcome() {
+export default function Welcome({ onNavigate }) {
     return (
         <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
             <style>{`
@@ -77,7 +77,11 @@ export default function Welcome() {
                                 {menu.submenus.map((submenu) => {
                                     const Icon = submenu.icon;
                                     return (
-                                        <li key={submenu.id} className="welcome-bullet flex items-center text-sm">
+                                        <li
+                                            key={submenu.id}
+                                            onClick={() => onNavigate({ id: submenu.id, parentId: menu.id })}
+                                            className="welcome-bullet flex items-center text-sm cursor-pointer hover:bg-stone-50 transition-colors rounded-lg px-2 py-1"
+                                        >
                                             <Icon size={14} className="mr-3" style={{ color: colors.textLight }} />
                                             <span className="welcome-submenu">{submenu.id}</span>
                                         </li>

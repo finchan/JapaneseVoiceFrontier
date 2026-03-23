@@ -274,7 +274,7 @@ function App() {
             {/* Content Area */}
             <div className="p-4 md:p-5">
                 <div className="max-w-5xl mx-auto">
-                    {activeMenu === 'WELCOME' && <Welcome />}
+                    {activeMenu === 'WELCOME' && <Welcome onNavigate={handleSubMenuClick} />}
                     {activeMenu === 'VOICE POOL' && <VoicePool />}
                     {activeMenu === 'VOICE ANALYSIS' && <VoiceAnalysis />}
                     {activeMenu === 'VOICE MANAGEMENT' && <VoiceManagement />}
