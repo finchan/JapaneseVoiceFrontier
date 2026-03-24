@@ -9,6 +9,7 @@ import VoiceManagement from './pages/VoiceManagement';
 import VoicePool from './pages/VoicePool';
 import AdjectiveI from './pages/AdjectiveI';
 import AdjectiveNa from './pages/AdjectiveNa';
+import StudySession from './pages/StudySession';
 
 const colors = {
     background: '#f7f5f0',
@@ -53,6 +54,12 @@ function App() {
                 { id: 'VERB', icon: BookOpen, page: 'VerbConjugation' },
                 { id: 'ADJECTIVE I', icon: FileType, page: 'AdjectiveI' },
                 { id: 'ADJECTIVE NA', icon: List, page: 'AdjectiveNa' },
+            ]
+        },
+        {
+            id: 'STUDY',
+            submenus: [
+                { id: 'STUDY SESSION', icon: BookOpen, page: 'StudySession' },
             ]
         },
     ];
@@ -282,6 +289,7 @@ function App() {
                     {activeMenu === 'VERB' && <VerbConjugation />}
                     {activeMenu === 'ADJECTIVE I' && <AdjectiveI />}
                     {activeMenu === 'ADJECTIVE NA' && <AdjectiveNa />}
+                    {activeMenu === 'STUDY SESSION' && <StudySession />}
                 </div>
             </div>
         </div>
