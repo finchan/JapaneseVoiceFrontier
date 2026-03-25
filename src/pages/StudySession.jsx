@@ -18,6 +18,49 @@ const colors = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const splitIntoMoras = (kana) => {
+    if (!kana) return [];
+    const moras = [];
+    
+    const iDanHiragana = 'きしちにひみりぎじびぴぢ';
+    const iDanKatakana = 'キシチニヒミリギジビピヂ';
+    const smallY = /[ゃゅょ]/;
+    const smallYKata = /[ャュョ]/;
+    const smallVowels = /[ぁぃぅぇぉ]/;
+    const smallVowelsKata = /[ァィゥェォ]/;
+    
+    for (let i = 0; i < kana.length; i++) {
+        const char = kana[i];
+        
+        if (iDanHiragana.includes(char) && i + 1 < kana.length && smallY.test(kana[i + 1])) {
+            moras.push(char + kana[i + 1]);
+            i++;
+        } else if (iDanKatakana.includes(char) && i + 1 < kana.length && smallYKata.test(kana[i + 1])) {
+            moras.push(char + kana[i + 1]);
+            i++;
+        } else if (char === 'ふ' && i + 1 < kana.length && smallVowels.test(kana[i + 1])) {
+            moras.push(char + kana[i + 1]);
+            i++;
+        } else if (char === 'フ' && i + 1 < kana.length && smallVowelsKata.test(kana[i + 1])) {
+            moras.push(char + kana[i + 1]);
+            i++;
+        } else if ((char === 'て' || char === 'で') && i + 1 < kana.length && kana[i + 1] === 'ぃ') {
+            moras.push(char + kana[i + 1]);
+            i++;
+        } else if ((char === 'テ' || char === 'デ') && i + 1 < kana.length && kana[i + 1] === 'ィ') {
+            moras.push(char + kana[i + 1]);
+            i++;
+        } else if ((char === 'う' || char === 'ウ') && i + 1 < kana.length && (smallVowels.test(kana[i + 1]) || smallVowelsKata.test(kana[i + 1]))) {
+            moras.push(char + kana[i + 1]);
+            i++;
+        } else {
+            moras.push(char);
+        }
+    }
+    
+    return moras;
+};
+
 const highlightKana = (text) => {
     if (!text) return text;
     // ga, da, ba rows (voiced)
@@ -60,7 +103,7 @@ const PitchAccent = ({ kana, pitch }) => {
     if (!pitch || !kana) return <div className="text-sm py-1 font-bold">{kana}</div>;
 
     const patterns = pitch.toString().split(/[/\+]/).map(p => p.trim());
-    const moras = kana.split('');
+    const moras = splitIntoMoras(kana);
 
     const renderPattern = (pValStr, pIdx) => {
         const pVal = parseInt(pValStr);
@@ -75,9 +118,10 @@ const PitchAccent = ({ kana, pitch }) => {
                 {moras.map((m, i) => {
                     const isHigh = levels[i];
                     const nextHigh = i < moras.length - 1 ? levels[i + 1] : isHigh;
+                    const moraWidth = m.length > 1 ? 'w-10' : 'w-6';
 
                     return (
-                        <div key={i} className="relative flex items-center justify-center w-6 h-full">
+                        <div key={i} className={`relative flex items-center justify-center h-full ${moraWidth}`}>
                             {/* Horizontal Line Segment */}
                             <div
                                 className="w-full h-[1px] absolute z-20"
@@ -119,12 +163,136 @@ const PitchAccent = ({ kana, pitch }) => {
     );
 };
 
+const isKanji = (char) => {
+    const code = char.charCodeAt(0);
+    return code >= 0x4e00 && code <= 0x9faf;
+};
+
+const isHiragana = (char) => {
+    const code = char.charCodeAt(0);
+    return code >= 0x3040 && code <= 0x309f;
+};
+
+const isKatakana = (char) => {
+    const code = char.charCodeAt(0);
+    return code >= 0x30a0 && code <= 0x30ff;
+};
+
+const isKana = (char) => isHiragana(char) || isKatakana(char);
+
+const buildFurigana = (kanji, kana) => {
+    if (!kanji || kanji === kana) {
+        return [{ type: 'text', text: kana }];
+    }
+
+    const result = [];
+    let kanaIdx = 0;
+
+    let i = 0;
+    while (i < kanji.length) {
+        const char = kanji[i];
+
+        if (isKanji(char)) {
+            let kanjiEnd = i;
+            while (kanjiEnd < kanji.length && isKanji(kanji[kanjiEnd])) {
+                kanjiEnd++;
+            }
+            const kanjiBlock = kanji.slice(i, kanjiEnd);
+
+            let okuriganaEnd = kanjiEnd;
+            while (okuriganaEnd < kanji.length && isKana(kanji[okuriganaEnd])) {
+                okuriganaEnd++;
+            }
+            const okurigana = kanji.slice(kanjiEnd, okuriganaEnd);
+
+            let furiganaEnd = kana.length;
+            if (okurigana.length > 0) {
+                for (let j = kanaIdx; j <= kana.length - okurigana.length; j++) {
+                    if (kana.slice(j, j + okurigana.length) === okurigana) {
+                        furiganaEnd = j;
+                        break;
+                    }
+                }
+            }
+
+            const furigana = kana.slice(kanaIdx, furiganaEnd);
+            result.push({ type: 'ruby', kanji: kanjiBlock, furigana });
+            kanaIdx = furiganaEnd;
+
+            if (okurigana.length > 0) {
+                result.push({ type: 'text', text: okurigana });
+                kanaIdx += okurigana.length;
+            }
+
+            i = okuriganaEnd;
+        } else if (isKana(char)) {
+            let kanaEnd = i;
+            while (kanaEnd < kanji.length && isKana(kanji[kanaEnd])) {
+                kanaEnd++;
+            }
+            const kanaBlock = kanji.slice(i, kanaEnd);
+            result.push({ type: 'text', text: kanaBlock });
+            kanaIdx += kanaBlock.length;
+            i = kanaEnd;
+        } else {
+            result.push({ type: 'text', text: char });
+            i++;
+        }
+    }
+
+    return result;
+};
+
 const Furigana = ({ kanji, kana }) => {
-    if (!kanji || kanji === kana) return <span className="text-4xl font-bold">{kana}</span>;
+    if (!kanji || kanji === kana) {
+        return <span className="text-4xl font-bold" style={{ color: colors.text }}>{kana}</span>;
+    }
+
+    const parts = buildFurigana(kanji, kana);
+
     return (
-        <ruby className="text-4xl font-bold">
-            {kanji}<rt className="text-base font-normal tracking-wider mb-1" style={{ color: colors.textLight }}>{kana}</rt>
-        </ruby>
+        <span className="text-4xl font-bold" style={{ color: colors.text }}>
+            {parts.map((part, i) => {
+                if (part.type === 'text') {
+                    return <span key={i}>{part.text}</span>;
+                }
+                return (
+                    <ruby key={i}>
+                        <span style={{ color: colors.text }}>{part.kanji}</span>
+                        <rt className="text-base font-normal tracking-wider mb-1" style={{ color: colors.textLight }}>
+                            {part.furigana}
+                        </rt>
+                    </ruby>
+                );
+            })}
+        </span>
+    );
+};
+
+const AutoFitText = ({ children }) => {
+    const text = typeof children === 'string' ? children : '';
+    const charCount = text.length;
+    
+    let sizeClass = 'text-7xl';
+    if (charCount > 12) {
+        sizeClass = 'text-2xl md:text-7xl';
+    } else if (charCount > 10) {
+        sizeClass = 'text-3xl md:text-7xl';
+    } else if (charCount > 8) {
+        sizeClass = 'text-4xl md:text-7xl';
+    } else if (charCount > 6) {
+        sizeClass = 'text-5xl md:text-7xl';
+    } else if (charCount > 4) {
+        sizeClass = 'text-6xl md:text-7xl';
+    }
+
+    return (
+        <div 
+            className={`font-black tracking-tighter whitespace-nowrap ${sizeClass}`}
+            style={{ color: colors.text }}
+        >
+            {children}
+        </div>
     );
 };
 
@@ -362,8 +530,20 @@ export default function StudySession() {
                 >
                     <ChevronLeft size={16} /> BACK
                 </button>
-                <div className="text-xs font-black uppercase tracking-widest" style={{ color: colors.primary }}>
-                    Progress: {currentIndex + 1} / {vocabulary.length}
+                <div className="flex-1 mx-6 h-6 bg-stone-100 rounded-full overflow-hidden relative border border-stone-200">
+                    <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{
+                            width: `${vocabulary.length > 0 ? ((currentIndex + 1) / vocabulary.length) * 100 : 0}%`,
+                            backgroundColor: colors.primary
+                        }}
+                    />
+                    <span
+                        className="absolute inset-0 flex items-center justify-center text-[10px] font-black tracking-wider"
+                        style={{ color: colors.text }}
+                    >
+                        {currentIndex + 1} / {vocabulary.length}
+                    </span>
                 </div>
             </div>
 
@@ -384,9 +564,9 @@ export default function StudySession() {
             >
                 {!isRevealed ? (
                     <div className="text-center space-y-8">
-                        <div className="text-7xl font-black tracking-tighter" style={{ color: colors.text }}>
+                        <AutoFitText>
                             {frontMode === 'kanji' ? (currentWord.kanji || currentWord.kana) : currentWord.kana}
-                        </div>
+                        </AutoFitText>
                     </div>
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-between space-y-6 animate-in fade-in duration-300 relative">

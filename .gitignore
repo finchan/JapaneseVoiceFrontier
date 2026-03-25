@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+public/dict/base.dat.gz
+public/dict/cc.dat.gz
+public/dict/check.dat.gz
+public/dict/tid_map.dat.gz
+public/dict/tid_pos.dat.gz
+public/dict/tid.dat.gz
+public/dict/unk_char.dat.gz
+public/dict/unk_compat.dat.gz
+public/dict/unk_invoke.dat.gz
+public/dict/unk_map.dat.gz
+public/dict/unk_pos.dat.gz
+public/dict/unk.dat.gz
