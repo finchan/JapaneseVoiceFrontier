@@ -351,22 +351,56 @@ export default function StudySession() {
 
     // Auto-play audio on reveal
     useEffect(() => {
+        let active = true;
         if (isRevealed && currentWord && currentWord.audio?.length > 0) {
-            playAudio(currentWord.audio[0].id);
+            const playRepeatedly = async () => {
+                const manifestId = currentWord.audio[0].id;
+                for (let i = 0; i < 3; i++) {
+                    if (!active) break;
+                    await playAudio(manifestId);
+                    if (i < 2 && active) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            };
+            playRepeatedly();
         }
-    }, [isRevealed, currentIndex, currentWord]);
-
-    const playAudio = async (manifestId) => {
-        try {
-            const url = API_CONFIG.buildURL(`/api/vocab/audio/stream/${manifestId}?t=${Date.now()}`);
+        return () => {
+            active = false;
             if (audioRef.current) {
                 audioRef.current.pause();
+                audioRef.current.onended = null;
             }
-            audioRef.current = new Audio(url);
-            audioRef.current.play();
-        } catch (err) {
-            console.error("Audio playback error", err);
-        }
+        };
+    }, [isRevealed, currentIndex, currentWord]);
+
+    const playAudio = (manifestId) => {
+        return new Promise((resolve) => {
+            try {
+                const url = API_CONFIG.buildURL(`/api/vocab/audio/stream/${manifestId}?t=${Date.now()}`);
+                if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current.onended = null;
+                    audioRef.current.onerror = null;
+                }
+                const audio = new Audio(url);
+                audioRef.current = audio;
+                
+                audio.onended = () => resolve(true);
+                audio.onerror = (e) => {
+                    console.error("Audio element error", e);
+                    resolve(false);
+                };
+                
+                audio.play().catch(err => {
+                    console.warn("Audio play interrupted or failed", err);
+                    resolve(false);
+                });
+            } catch (err) {
+                console.error("Audio playback error", err);
+                resolve(false);
+            }
+        });
     };
 
     const touchStart = useRef(null);
@@ -675,21 +709,57 @@ export default function StudySession() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-stone-500 mb-1">START (ms)</label>
-                                <input 
-                                    id="edit-start"
-                                    type="number" 
-                                    defaultValue={editingAudio.start} 
-                                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 font-mono text-stone-700 focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100 transition-all"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            const input = document.getElementById('edit-start');
+                                            input.value = Math.max(0, parseInt(input.value || 0) - 100);
+                                        }}
+                                        className="w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-lg transition-colors flex items-center justify-center"
+                                    >−</button>
+                                    <input 
+                                        id="edit-start"
+                                        type="number" 
+                                        defaultValue={editingAudio.start} 
+                                        className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 font-mono text-stone-700 focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100 transition-all text-center"
+                                    />
+                                    <button 
+                                        onClick={() => {
+                                            const input = document.getElementById('edit-start');
+                                            const endInput = document.getElementById('edit-end');
+                                            const maxVal = parseInt(endInput.value || editingAudio.end);
+                                            input.value = Math.min(maxVal - 100, parseInt(input.value || 0) + 100);
+                                        }}
+                                        className="w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-lg transition-colors flex items-center justify-center"
+                                    >+</button>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-stone-500 mb-1">END (ms)</label>
-                                <input 
-                                    id="edit-end"
-                                    type="number" 
-                                    defaultValue={editingAudio.end} 
-                                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 font-mono text-stone-700 focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100 transition-all"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            const input = document.getElementById('edit-end');
+                                            const startInput = document.getElementById('edit-start');
+                                            const minVal = parseInt(startInput.value || editingAudio.start);
+                                            input.value = Math.max(minVal + 100, parseInt(input.value || 0) - 100);
+                                        }}
+                                        className="w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-lg transition-colors flex items-center justify-center"
+                                    >−</button>
+                                    <input 
+                                        id="edit-end"
+                                        type="number" 
+                                        defaultValue={editingAudio.end} 
+                                        className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 font-mono text-stone-700 focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100 transition-all text-center"
+                                    />
+                                    <button 
+                                        onClick={() => {
+                                            const input = document.getElementById('edit-end');
+                                            input.value = parseInt(input.value || 0) + 100;
+                                        }}
+                                        className="w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-lg transition-colors flex items-center justify-center"
+                                    >+</button>
+                                </div>
                             </div>
                         </div>
 
