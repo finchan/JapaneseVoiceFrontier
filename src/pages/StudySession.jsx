@@ -100,18 +100,76 @@ const highlightKana = (text) => {
 };
 
 const PitchAccent = ({ kana, pitch }) => {
-    if (!pitch || !kana) return <div className="text-sm py-1 font-bold">{kana}</div>;
+    if (!pitch || !kana) return null;
 
-    const patterns = pitch.toString().split(/[/\+]/).map(p => p.trim());
     const moras = splitIntoMoras(kana);
 
-    const renderPattern = (pValStr, pIdx) => {
-        const pVal = parseInt(pValStr);
-        const levels = moras.map((_, i) => {
-            if (pVal === 0) return i > 0;
-            if (pVal === 1) return i === 0;
-            return i > 0 && i < pVal;
-        });
+    const parsePitchPattern = (patternStr) => {
+        const parts = patternStr.split('+').map(p => p.trim());
+        const segments = [];
+        
+        for (const part of parts) {
+            const match = part.match(/^(\d+)\[(\d+)\]$/);
+            if (match) {
+                segments.push({
+                    pitchValue: parseInt(match[1]),
+                    moraCount: parseInt(match[2])
+                });
+            }
+        }
+        
+        if (segments.length === 0) {
+            const pVal = parseInt(patternStr);
+            if (!isNaN(pVal)) {
+                return [{ pitchValue: pVal, moraCount: moras.length }];
+            }
+            return null;
+        }
+        
+        return segments;
+    };
+
+    const computeLevels = (segments) => {
+        const levels = [];
+        let moraIndex = 0;
+        
+        for (const seg of segments) {
+            const { pitchValue, moraCount } = seg;
+            
+            for (let i = 0; i < moraCount && moraIndex < moras.length; i++) {
+                const localIdx = i;
+                let isHigh;
+                
+                if (pitchValue === 0) {
+                    isHigh = localIdx > 0;
+                } else if (pitchValue === 1) {
+                    isHigh = localIdx === 0;
+                } else {
+                    isHigh = localIdx > 0 && localIdx < pitchValue;
+                }
+                
+                levels.push(isHigh);
+                moraIndex++;
+            }
+        }
+        
+        while (levels.length < moras.length) {
+            const lastSeg = segments[segments.length - 1];
+            if (lastSeg && lastSeg.pitchValue === 0) {
+                levels.push(true);
+            } else {
+                levels.push(false);
+            }
+        }
+        
+        return levels;
+    };
+
+    const patterns = pitch.toString().split('/').map(p => p.trim());
+    const parsedPatterns = patterns.map(parsePitchPattern).filter(Boolean);
+
+    const renderPattern = (segments, pIdx) => {
+        const levels = computeLevels(segments);
 
         return (
             <div key={pIdx} className="flex items-center gap-0 relative h-8 px-1">
@@ -122,7 +180,6 @@ const PitchAccent = ({ kana, pitch }) => {
 
                     return (
                         <div key={i} className={`relative flex items-center justify-center h-full ${moraWidth}`}>
-                            {/* Horizontal Line Segment */}
                             <div
                                 className="w-full h-[1px] absolute z-20"
                                 style={{
@@ -131,7 +188,6 @@ const PitchAccent = ({ kana, pitch }) => {
                                 }}
                             />
 
-                            {/* Vertical Connector */}
                             {i < moras.length - 1 && isHigh !== nextHigh && (
                                 <div
                                     className="absolute z-20"
@@ -145,8 +201,7 @@ const PitchAccent = ({ kana, pitch }) => {
                                 />
                             )}
 
-                            {/* Kana Character */}
-                            <span className="text-[14px] z-10 leading-none font-medium" style={{ color: colors.text }}>
+                            <span className="text-[13px] z-10 leading-none font-medium" style={{ color: colors.text }}>
                                 {highlightKana(m)}
                             </span>
                         </div>
@@ -157,8 +212,8 @@ const PitchAccent = ({ kana, pitch }) => {
     };
 
     return (
-        <div className="flex flex-wrap items-center justify-center gap-8 mt-4 w-full">
-            {patterns.map((p, i) => renderPattern(p, i))}
+        <div className="flex flex-wrap items-center justify-center gap-8 w-full">
+            {parsedPatterns.map((segments, i) => renderPattern(segments, i))}
         </div>
     );
 };
@@ -604,11 +659,18 @@ export default function StudySession() {
                     </div>
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-between space-y-6 animate-in fade-in duration-300 relative">
-                        {/* Audio Edit Icon */}
+                        {/* Level Badge - Top Left */}
+                        {currentWord.level && (
+                            <span className="absolute -top-6 -left-5 p-2 rounded-full bg-green-50 text-green-600 font-black text-[10px] shadow-sm flex items-center justify-center">
+                                {currentWord.level}
+                            </span>
+                        )}
+
+                        {/* Audio Edit Icon - Top Right */}
                         {currentWord.audio?.length > 0 && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setEditingAudio(currentWord.audio[0]); }}
-                                className="absolute -top-5 -right-5 p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-colors z-10 shadow-sm"
+                                className="absolute -top-6 -right-5 p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-colors z-10 shadow-sm"
                                 title="Edit Audio Timestamps"
                             >
                                 <Edit3 size={12} strokeWidth={2.5} />
@@ -616,23 +678,16 @@ export default function StudySession() {
                         )}
 
                         {/* Kana & Kanji */}
-                        <div className="text-center space-y-2">
+                        <div className="flex items-center justify-center gap-4 mb-3">
                             <Furigana kanji={currentWord.kanji} kana={currentWord.kana} />
                         </div>
 
-                        {/* Pitch Accent Section */}
-                        <div className="w-full flex flex-col items-center">
+                        <div className="w-full flex flex-col items-center -mb-4">
                             <PitchAccent kana={currentWord.kana} pitch={currentWord.pitch} />
-                            <div className="text-[10px] font-black uppercase tracking-widest opacity-40 mt-1">
-                                Pitch Accent: {currentWord.pitch}
-                            </div>
                         </div>
 
                         {/* Meaning */}
                         <div className="w-full bg-stone-50/50 rounded-2xl p-6 border border-stone-100">
-                            <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-50" style={{ color: colors.primary }}>
-                                MEANING & DEFINITIONS
-                            </div>
                             <div className="space-y-3">
                                 {currentWord.definitions?.map((d, i) => (
                                     <div key={i} className="flex gap-3 items-start">
