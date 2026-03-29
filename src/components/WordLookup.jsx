@@ -237,8 +237,12 @@ export function WordLookupPanel({lookup, inflectionMode, toggleMode, hideLookup,
                                     {lookup.data.word || lookup.text}
                                 </span>
                                 {!lookup.loading && lookup.data?.level && (
-                                    <div className="px-3 py-1 rounded-full flex items-center shadow-md text-stone-900 animate-in fade-in zoom-in duration-500" style={{ borderColor: colors.cardBorder, borderWidth: "1px", color: colors.cardBorder }}>
-                                        <span className="text-[10px] font-black tracking-widest uppercase">{lookup.data.level}</span>
+                                    <div className="flex gap-1.5 flex-wrap">
+                                        {lookup.data.level.split(/[,，、]+/).map((lvl, idx) => (
+                                            <div key={idx} className="px-3 py-1 rounded-full flex items-center shadow-md text-stone-900 animate-in fade-in zoom-in duration-500" style={{ borderColor: colors.cardBorder, borderWidth: "1px", color: colors.cardBorder }}>
+                                                <span className="text-[10px] font-black tracking-widest uppercase">{lvl.trim()}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                                 <div className="flex gap-3 ml-2">

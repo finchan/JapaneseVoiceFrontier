@@ -49,6 +49,12 @@ const API_CONFIG = {
 
         // TTS
         ttsStream: '/api/tts-stream',
+
+        // JLPT
+        jlptLevels: '/api/jlpt/levels',
+        jlptUnits: '/api/jlpt/units',
+        jlptWords: '/api/jlpt/words',
+        jlptProgress: '/api/jlpt/progress',
     },
 
     // 辅助方法：构建完整 URL

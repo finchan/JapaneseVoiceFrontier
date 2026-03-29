@@ -10,6 +10,7 @@ import VoicePool from './pages/VoicePool';
 import AdjectiveI from './pages/AdjectiveI';
 import AdjectiveNa from './pages/AdjectiveNa';
 import StudySession from './pages/StudySession';
+import JLPTList from './pages/JLPTList';
 
 const colors = {
     background: '#f7f5f0',
@@ -30,6 +31,8 @@ function App() {
     const [openSubMenu, setOpenSubMenu] = useState(null);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [mobileSubMenu, setMobileSubMenu] = useState(null);
+    const [jlptStudyParams, setJlptStudyParams] = useState(null); // { level, unit, words }
+    const [jlptNavContext, setJlptNavContext] = useState(null); // { level, unit }
 
     const menuRef = useRef(null);
 
@@ -57,9 +60,10 @@ function App() {
             ]
         },
         {
-            id: 'STUDY',
+            id: 'LEXICON',
             submenus: [
-                { id: 'STUDY SESSION', icon: BookOpen, page: 'StudySession' },
+                { id: 'WORD LIST', icon: BookOpen, page: 'StudySession' },
+                { id: 'JLPT LIST', icon: List, page: 'JLPTList' },
             ]
         },
     ];
@@ -104,6 +108,17 @@ function App() {
         setActiveFirstLevel(submenu.parentId || menuStructure.find(m => m.submenus.some(s => s.id === submenu.id))?.id);
         setMobileMenuOpen(false);
         setMobileSubMenu(null);
+        
+        // When manually switching menus, reset JLPT contexts to start fresh
+        setJlptStudyParams(null);
+        setJlptNavContext(null);
+    };
+
+    const handleStartJLPTStudy = (level, unit, words) => {
+        setJlptStudyParams({ level, unit, words });
+        setJlptNavContext({ level, unit });
+        setActiveMenu('WORD LIST'); // Switch to StudySession
+        setActiveFirstLevel('LEXICON');
     };
 
     if (!isAuthenticated) {
@@ -133,9 +148,8 @@ function App() {
                                 onMouseLeave={() => setOpenSubMenu(null)}
                             >
                                 <button
-                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 ${
-                                        activeFirstLevel === menu.id ? 'shadow-md scale-105' : 'hover:bg-stone-50'
-                                    }`}
+                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 ${activeFirstLevel === menu.id ? 'shadow-md scale-105' : 'hover:bg-stone-50'
+                                        }`}
                                     style={{
                                         backgroundColor: activeFirstLevel === menu.id ? colors.highlight : 'transparent',
                                         color: activeFirstLevel === menu.id ? '#ffffff' : colors.textLight
@@ -154,16 +168,14 @@ function App() {
                                             return (
                                                 <button
                                                     key={submenu.id}
-                                                    onClick={() => { 
-                                                        setActiveMenu(submenu.id); 
-                                                        setActiveFirstLevel(menu.id);
+                                                    onClick={() => {
+                                                        handleSubMenuClick({ ...submenu, parentId: menu.id });
                                                         setOpenSubMenu(null);
                                                     }}
-                                                    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors ${
-                                                        isActive 
-                                                            ? 'bg-stone-100 text-stone-800' 
+                                                    className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors ${isActive
+                                                            ? 'bg-stone-100 text-stone-800'
                                                             : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900'
-                                                    } ${index > 0 ? 'border-t border-stone-100' : ''}`}
+                                                        } ${index > 0 ? 'border-t border-stone-100' : ''}`}
                                                 >
                                                     <Icon size={14} />
                                                     {submenu.id}
@@ -210,11 +222,11 @@ function App() {
             {mobileMenuOpen && (
                 <div className="fixed inset-0 z-[2000] md:hidden">
                     {/* Backdrop */}
-                    <div 
+                    <div
                         className="absolute inset-0 bg-black/50"
                         onClick={() => setMobileMenuOpen(false)}
                     />
-                    
+
                     {/* Drawer */}
                     <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-2xl animate-in slide-in-from-left duration-300">
                         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: colors.border }}>
@@ -235,9 +247,8 @@ function App() {
                                 <div key={menu.id}>
                                     <button
                                         onClick={() => handleMenuClick(menu.id)}
-                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
-                                            activeFirstLevel === menu.id ? 'shadow-md' : 'hover:bg-stone-50'
-                                        }`}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${activeFirstLevel === menu.id ? 'shadow-md' : 'hover:bg-stone-50'
+                                            }`}
                                         style={{
                                             backgroundColor: activeFirstLevel === menu.id ? colors.highlight : 'transparent',
                                             color: activeFirstLevel === menu.id ? '#ffffff' : colors.text
@@ -257,11 +268,10 @@ function App() {
                                                     <button
                                                         key={submenu.id}
                                                         onClick={() => handleSubMenuClick({ ...submenu, parentId: menu.id })}
-                                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-colors ${
-                                                            isActive 
-                                                                ? 'bg-stone-100' 
+                                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-colors ${isActive
+                                                                ? 'bg-stone-100'
                                                                 : 'hover:bg-stone-50'
-                                                        }`}
+                                                            }`}
                                                         style={{ color: isActive ? colors.primary : colors.textLight }}
                                                     >
                                                         <Icon size={16} />
@@ -289,7 +299,21 @@ function App() {
                     {activeMenu === 'VERB' && <VerbConjugation />}
                     {activeMenu === 'ADJECTIVE I' && <AdjectiveI />}
                     {activeMenu === 'ADJECTIVE NA' && <AdjectiveNa />}
-                    {activeMenu === 'STUDY SESSION' && <StudySession />}
+                    {activeMenu === 'WORD LIST' && (
+                        <StudySession 
+                            jlptStudyParams={jlptStudyParams} 
+                            onClearJLPT={() => {
+                                setJlptStudyParams(null);
+                                setActiveMenu('JLPT LIST');
+                            }} 
+                        />
+                    )}
+                    {activeMenu === 'JLPT LIST' && (
+                        <JLPTList 
+                            onStartStudy={handleStartJLPTStudy} 
+                            initialContext={jlptNavContext}
+                        />
+                    )}
                 </div>
             </div>
         </div>
